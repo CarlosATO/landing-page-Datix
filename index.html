@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Datix — Turn your raw data into clear, actionable insights. Real-time analytics, smart dashboards and AI-powered forecasting for modern teams." />
+  <title>Datix — Data Analytics Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════ -->
+  <header class="navbar" role="banner">
+    <div class="navbar-inner">
+
+      <!-- Logo -->
+      <a class="logo" href="#">
+        <span class="logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+          </svg>
+        </span>
+        Datix
+      </a>
+
+      <!-- Navigation -->
+      <nav aria-label="Main navigation">
+        <ul class="nav-links" role="list">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#testimonials">Customers</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+        </ul>
+      </nav>
+
+      <!-- Actions -->
+      <div class="nav-actions">
+        <a href="#" class="btn btn-secondary">Log in</a>
+        <a href="#pricing" class="btn btn-primary">Get started free</a>
+      </div>
+
+      <!-- Hamburger (mobile) -->
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ══════════════════════════════════
+         HERO
+    ══════════════════════════════════ -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="hero-badge-dot" aria-hidden="true"></span>
+          Now with AI-powered forecasting
+        </div>
+
+        <h1 id="hero-heading">
+          Turn data into<br /><span>smart decisions</span>
+        </h1>
+
+        <p>
+          Datix is the analytics platform that connects your data sources,
+          visualises what matters and surfaces insights before you even ask.
+        </p>
+
+        <div class="hero-cta">
+          <a href="#pricing" class="btn btn-primary">
+            <!-- arrow icon -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            Start for free
+          </a>
+          <a href="#how-it-works" class="btn btn-outline-white">Watch demo</a>
+        </div>
+
+        <div class="hero-stats" aria-label="Key statistics">
+          <div class="hero-stat">
+            <strong><span data-count="12000" data-suffix="+">0</span></strong>
+            <span>Companies worldwide</span>
+          </div>
+          <div class="hero-stat">
+            <strong><span data-count="98" data-suffix="%">0</span></strong>
+            <span>Customer satisfaction</span>
+          </div>
+          <div class="hero-stat">
+            <strong><span data-count="4" data-suffix="B+">0</span></strong>
+            <span>Events processed daily</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════
+         FEATURES
+    ══════════════════════════════════ -->
+    <section class="features" id="features" aria-labelledby="features-heading">
+      <div class="container">
+        <div class="features-header">
+          <span class="section-label">Features</span>
+          <h2 class="section-heading" id="features-heading">Everything you need to understand your data</h2>
+          <p class="section-sub">From ingestion to visualisation, Datix handles the heavy lifting so your team can focus on decisions, not pipelines.</p>
+        </div>
+
+        <div class="features-grid">
+
+          <!-- Card 1 -->
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </div>
+            <h3>Unified Dashboards</h3>
+            <p>Drag-and-drop dashboard builder with 60+ chart types and live data connections to every major data source.</p>
+          </article>
+
+          <!-- Card 2 -->
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <h3>Real-time Streaming</h3>
+            <p>Monitor live events as they happen. Sub-second latency so you always act on the freshest data, not yesterday's reports.</p>
+          </article>
+
+          <!-- Card 3 -->
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <h3>AI Forecasting</h3>
+            <p>Automatically detect trends and anomalies. Our ML models predict outcomes and flag issues before they escalate.</p>
+          </article>
+
+          <!-- Card 4 -->
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h3>Team Collaboration</h3>
+            <p>Share dashboards, annotate charts, and set role-based access controls — all in one secure workspace.</p>
+          </article>
+
+          <!-- Card 5 -->
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <h3>Data Connectors</h3>
+            <p>Connect to 200+ sources — databases, SaaS apps, data warehouses — in minutes with no-code integrations.</p>
+          </article>
+
+          <!-- Card 6 -->
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3>Enterprise Security</h3>
+            <p>SOC 2 Type II certified, GDPR compliant. End-to-end encryption, SSO, and granular audit logs included.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════
+         HOW IT WORKS
+    ══════════════════════════════════ -->
+    <section class="how-it-works" id="how-it-works" aria-labelledby="how-heading">
+      <div class="container">
+        <div class="how-it-works-inner">
+
+          <!-- Left: steps -->
+          <div>
+            <span class="section-label">How it works</span>
+            <h2 class="section-heading" id="how-heading">Up and running in under 5 minutes</h2>
+            <p class="section-sub">No data engineering degree required. If you can connect a Wi-Fi network, you can set up Datix.</p>
+
+            <ol class="steps-list" aria-label="Setup steps">
+              <li class="step">
+                <span class="step-num" aria-hidden="true">1</span>
+                <div class="step-body">
+                  <h4>Connect your sources</h4>
+                  <p>Authorise your databases, SaaS tools and warehouses with OAuth or an API key. No code needed.</p>
+                </div>
+              </li>
+              <li class="step">
+                <span class="step-num" aria-hidden="true">2</span>
+                <div class="step-body">
+                  <h4>Define your metrics</h4>
+                  <p>Choose the KPIs that matter most. Our assistant suggests the right calculations automatically.</p>
+                </div>
+              </li>
+              <li class="step">
+                <span class="step-num" aria-hidden="true">3</span>
+                <div class="step-body">
+                  <h4>Explore &amp; share insights</h4>
+                  <p>Get a live dashboard instantly. Export reports, set alerts and share with stakeholders in one click.</p>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <!-- Right: Dashboard mockup -->
+          <div class="dashboard-mockup" role="img" aria-label="Datix dashboard preview">
+            <div class="mockup-bar">
+              <span class="mockup-dot"></span>
+              <span class="mockup-dot"></span>
+              <span class="mockup-dot"></span>
+            </div>
+            <div class="mockup-body">
+              <div class="mockup-row">
+                <div class="mockup-card">
+                  <p class="m-label">Total Revenue</p>
+                  <p class="m-value">$2.4M</p>
+                  <p class="m-change">↑ 14.2% vs last month</p>
+                </div>
+                <div class="mockup-card">
+                  <p class="m-label">Active Users</p>
+                  <p class="m-value">84.7K</p>
+                  <p class="m-change">↑ 8.6% vs last month</p>
+                </div>
+              </div>
+              <div class="mockup-chart">
+                <p class="m-label">Weekly Events</p>
+                <div class="chart-bars" aria-hidden="true">
+                  <div class="chart-bar" style="height:40%"></div>
+                  <div class="chart-bar" style="height:60%"></div>
+                  <div class="chart-bar" style="height:50%"></div>
+                  <div class="chart-bar" style="height:75%"></div>
+                  <div class="chart-bar" style="height:55%"></div>
+                  <div class="chart-bar" style="height:90%"></div>
+                  <div class="chart-bar" style="height:70%"></div>
+                </div>
+              </div>
+              <div class="mockup-row">
+                <div class="mockup-card">
+                  <p class="m-label">Conversion</p>
+                  <p class="m-value">3.8%</p>
+                  <p class="m-change">↑ 0.4 pp</p>
+                </div>
+                <div class="mockup-card">
+                  <p class="m-label">Avg. Session</p>
+                  <p class="m-value">4m 12s</p>
+                  <p class="m-change">↑ 12% vs last week</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════
+         TESTIMONIALS
+    ══════════════════════════════════ -->
+    <section class="testimonials" id="testimonials" aria-labelledby="testimonials-heading">
+      <div class="container">
+        <div class="testimonials-header">
+          <span class="section-label">Customers</span>
+          <h2 class="section-heading" id="testimonials-heading">Loved by data-driven teams</h2>
+          <p class="section-sub">Thousands of companies rely on Datix to power their most critical decisions.</p>
+        </div>
+
+        <div class="testimonials-grid">
+
+          <article class="testimonial-card">
+            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+            <blockquote>"Datix replaced three separate tools for us. The dashboards update in real time and the AI alerts caught a payment drop we would have missed for days."</blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar" style="background:#635bff;" aria-hidden="true">SR</div>
+              <div>
+                <strong>Sofia Ramírez</strong>
+                <span>Head of Data, Finnovate</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="testimonial-card">
+            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+            <blockquote>"Setup took less than an afternoon. We connected our Postgres database and Shopify store and had a working dashboard before lunch. Genuinely impressive."</blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar" style="background:#0ea5e9;" aria-hidden="true">ML</div>
+              <div>
+                <strong>Marcus Lange</strong>
+                <span>CTO, Stackly</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="testimonial-card">
+            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+            <blockquote>"Our marketing team now runs their own reports without needing the data team. Datix's no-code interface is a game-changer for cross-functional collaboration."</blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar" style="background:#10b981;" aria-hidden="true">AK</div>
+              <div>
+                <strong>Aisha Kamara</strong>
+                <span>VP Marketing, GrowthBase</span>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════
+         PRICING
+    ══════════════════════════════════ -->
+    <section class="pricing" id="pricing" aria-labelledby="pricing-heading">
+      <div class="container">
+        <div class="pricing-header">
+          <span class="section-label">Pricing</span>
+          <h2 class="section-heading" id="pricing-heading">Simple, transparent pricing</h2>
+          <p class="section-sub">Start free and scale as you grow. No hidden fees, no surprises.</p>
+        </div>
+
+        <div class="pricing-grid">
+
+          <!-- Starter -->
+          <div class="pricing-card">
+            <h3>Starter</h3>
+            <div class="pricing-price">
+              <sup>$</sup><strong>0</strong><span>/ month</span>
+            </div>
+            <p class="pricing-desc">Perfect for individuals and small side-projects.</p>
+            <ul class="pricing-features">
+              <li>3 dashboards</li>
+              <li>5 data connectors</li>
+              <li>1 million events / month</li>
+              <li>7-day data history</li>
+              <li>Community support</li>
+            </ul>
+            <a href="#" class="btn btn-secondary">Get started free</a>
+          </div>
+
+          <!-- Growth (featured) -->
+          <div class="pricing-card featured">
+            <span class="pricing-badge">Most popular</span>
+            <h3>Growth</h3>
+            <div class="pricing-price">
+              <sup>$</sup><strong>49</strong><span>/ month</span>
+            </div>
+            <p class="pricing-desc">For growing teams that need more power and collaboration.</p>
+            <ul class="pricing-features">
+              <li>Unlimited dashboards</li>
+              <li>50 data connectors</li>
+              <li>500 million events / month</li>
+              <li>1-year data history</li>
+              <li>AI forecasting &amp; alerts</li>
+              <li>Priority email support</li>
+            </ul>
+            <a href="#" class="btn btn-primary">Start 14-day trial</a>
+          </div>
+
+          <!-- Enterprise -->
+          <div class="pricing-card">
+            <h3>Enterprise</h3>
+            <div class="pricing-price">
+              <strong style="font-size:36px">Custom</strong>
+            </div>
+            <p class="pricing-desc">Tailored for large organisations with advanced requirements.</p>
+            <ul class="pricing-features">
+              <li>Everything in Growth</li>
+              <li>Unlimited connectors &amp; events</li>
+              <li>Unlimited data history</li>
+              <li>SSO &amp; advanced security</li>
+              <li>Dedicated customer success</li>
+              <li>SLA &amp; custom contracts</li>
+            </ul>
+            <a href="#" class="btn btn-secondary">Contact sales</a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════
+         CTA BANNER
+    ══════════════════════════════════ -->
+    <section class="cta-banner" aria-labelledby="cta-heading">
+      <div class="container">
+        <h2 id="cta-heading">Ready to turn your data into a competitive edge?</h2>
+        <p>Join 12,000+ companies already growing smarter with Datix. Free to start, no credit card required.</p>
+        <a href="#pricing" class="btn btn-primary">
+          Get started for free
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════════════
+       FOOTER
+  ══════════════════════════════════ -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-grid">
+
+      <div class="footer-brand">
+        <a class="logo" href="#">
+          <span class="logo-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+          </span>
+          Datix
+        </a>
+        <p>The analytics platform built for modern data teams. Connect, explore and share insights at the speed of your business.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#">Integrations</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Roadmap</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Press</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Documentation</a></li>
+          <li><a href="#">API reference</a></li>
+          <li><a href="#">Community</a></li>
+          <li><a href="#">Status</a></li>
+          <li><a href="#">Contact us</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 Datix, Inc. All rights reserved.</span>
+      <div class="footer-bottom-links">
+        <a href="#">Privacy policy</a>
+        <a href="#">Terms of service</a>
+        <a href="#">Cookie settings</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
