@@ -12,8 +12,16 @@ import {
     Package,
     Users,
     ExternalLink,
-    FileText
+    FileText,
+    Check
 } from "lucide-react";
+
+const AVAILABLE_APPS = [
+    { id: 'POS', name: 'Caja POS', reversed: false, roles: [{ v: 'CASHIER', l: 'Cajero' }, { v: 'MANAGER', l: 'Jefe de Local' }] },
+    { id: 'LOGISTICA', name: 'Logística', roles: [{ v: 'STOCKER', l: 'Bodeguero' }, { v: 'MANAGER', l: 'Jefe de Operaciones' }] },
+    { id: 'RRHH', name: 'Recursos Humanos', roles: [{ v: 'ASSISTANT', l: 'Asistente' }, { v: 'ADMIN', l: 'Administrador' }] },
+    { id: 'ADQUISICIONES', name: 'Adquisiciones', roles: [{ v: 'BUYER', l: 'Comprador' }, { v: 'MANAGER', l: 'Jefe de Compras' }] }
+];
 
 // Inicializa el cliente de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
@@ -40,8 +48,8 @@ export default function PortalDashboard() {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteName, setInviteName] = useState('');
     const [invitePassword, setInvitePassword] = useState('');
-    const [inviteRole, setInviteRole] = useState('CASHIER');
-    const [inviteApps, setInviteApps] = useState(['POS']);
+    const [inviteRole, setInviteRole] = useState('MEMBER');
+    const [moduleRoles, setModuleRoles] = useState({});
 
     // Cargar Usuario y Empresa
     useEffect(() => {
@@ -113,6 +121,25 @@ export default function PortalDashboard() {
         }
     };
 
+    const handleToggleModule = (appId, defaultRole) => {
+        setModuleRoles(prev => {
+            const next = { ...prev };
+            if (next[appId]) {
+                delete next[appId];
+            } else {
+                next[appId] = defaultRole;
+            }
+            return next;
+        });
+    };
+
+    const handleChangeModuleRole = (appId, newRole) => {
+        setModuleRoles(prev => ({
+            ...prev,
+            [appId]: newRole
+        }));
+    };
+
     const handleInviteUser = async (e) => {
         e.preventDefault();
         if (!inviteEmail || !inviteName || !invitePassword || !company?.id) {
@@ -129,9 +156,9 @@ export default function PortalDashboard() {
                     email: inviteEmail,
                     password: invitePassword,
                     fullName: inviteName,
-                    role: inviteRole,
+                    globalRole: inviteRole,
                     companyId: company.id,
-                    appAccess: inviteApps
+                    moduleRoles: moduleRoles
                 })
             });
 
@@ -150,8 +177,8 @@ export default function PortalDashboard() {
                 setInviteEmail('');
                 setInviteName('');
                 setInvitePassword('');
-                setInviteRole('CASHIER');
-                setInviteApps(['POS']);
+                setInviteRole('MEMBER');
+                setModuleRoles({});
                 alert("Empleado invitado con éxito");
             } else {
                 alert("Error: " + (result.error || "No se pudo invitar"));
@@ -388,10 +415,12 @@ export default function PortalDashboard() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                        {(member.app_access || []).map(app => (
-                                                            <span key={app} className="inline-flex rounded-md bg-white border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 shadow-sm">{app}</span>
+                                                        {member.module_roles && Object.entries(member.module_roles).map(([appId, role]) => (
+                                                            <span key={appId} className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 uppercase tracking-wider">
+                                                                {appId}: {role}
+                                                            </span>
                                                         ))}
-                                                        {(!member.app_access || member.app_access.length === 0) && <span className="text-slate-400 italic">Sin acceso</span>}
+                                                        {(!member.module_roles || Object.keys(member.module_roles).length === 0) && <span className="text-slate-400 italic text-xs">Sin acceso</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -413,94 +442,133 @@ export default function PortalDashboard() {
 
                             {/* Modal de Invitación */}
                             {showInviteModal && (
-                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-                                    <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                                        <div className="p-6 border-b border-slate-100">
-                                            <h3 className="text-xl font-bold text-slate-900">Invitar a un nuevo miembro</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Se creará una cuenta de acceso inmediata.</p>
+                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md">
+                                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+                                        <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Invitar Miembro</h3>
+                                                <p className="text-sm text-slate-500 mt-1 font-medium">Configura el perfil y los roles por módulo.</p>
+                                            </div>
+                                            <button
+                                                onClick={() => setShowInviteModal(false)}
+                                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                                            >
+                                                <LogOut className="h-6 w-6 rotate-180" />
+                                            </button>
                                         </div>
-                                        <form onSubmit={handleInviteUser} className="p-6 space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Nombre Completo</label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={inviteName}
-                                                    onChange={(e) => setInviteName(e.target.value)}
-                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
-                                                    placeholder="Juan Pérez"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Correo Electrónico</label>
-                                                <input
-                                                    type="email"
-                                                    required
-                                                    value={inviteEmail}
-                                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
-                                                    placeholder="juan@empresa.com"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Contraseña Temporal</label>
-                                                <input
-                                                    type="password"
-                                                    required
-                                                    value={invitePassword}
-                                                    onChange={(e) => setInvitePassword(e.target.value)}
-                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
-                                                    placeholder="********"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Rol del Empleado</label>
-                                                <select
-                                                    value={inviteRole}
-                                                    onChange={(e) => setInviteRole(e.target.value)}
-                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
-                                                >
-                                                    <option value="CASHIER">Cajero (Solo POS)</option>
-                                                    <option value="MANAGER">Manager (Maneja el Equipo)</option>
-                                                    <option value="STOCKER">Almacén (Solo Inventario)</option>
-                                                    <option value="OWNER">Dueño (Acceso Total)</option>
-                                                </select>
-                                            </div>
 
-                                            <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Acceso a Aplicaciones</label>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {['POS', 'LOGISTICA', 'RRHH'].map((app) => (
-                                                        <label key={app} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={inviteApps.includes(app)}
-                                                                onChange={(e) => {
-                                                                    if (e.target.checked) setInviteApps([...inviteApps, app]);
-                                                                    else setInviteApps(inviteApps.filter(a => a !== app));
-                                                                }}
-                                                                className="rounded text-blue-600 focus:ring-blue-500"
-                                                            />
-                                                            <span className="text-xs font-semibold text-slate-700">{app}</span>
-                                                        </label>
-                                                    ))}
+                                        <form onSubmit={handleInviteUser} className="p-8">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                                {/* Columna Izquierda: Datos */}
+                                                <div className="space-y-5">
+                                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Datos Básicos</h4>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Nombre Completo</label>
+                                                        <input
+                                                            type="text"
+                                                            required
+                                                            value={inviteName}
+                                                            onChange={(e) => setInviteName(e.target.value)}
+                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            placeholder="ej. Juan Pérez"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Correo Electrónico</label>
+                                                        <input
+                                                            type="email"
+                                                            required
+                                                            value={inviteEmail}
+                                                            onChange={(e) => setInviteEmail(e.target.value)}
+                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            placeholder="juan@datix.cl"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Contraseña Temporal</label>
+                                                        <input
+                                                            type="password"
+                                                            required
+                                                            value={invitePassword}
+                                                            onChange={(e) => setInvitePassword(e.target.value)}
+                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            placeholder="••••••••"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Rol en Datix Hub (Portal)</label>
+                                                        <select
+                                                            value={inviteRole}
+                                                            onChange={(e) => setInviteRole(e.target.value)}
+                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                        >
+                                                            <option value="MEMBER">Miembro / Empleado Base</option>
+                                                            <option value="OWNER">Dueño / Admin Total</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Columna Derecha: Accesos */}
+                                                <div className="space-y-4">
+                                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Accesos a Módulos</h4>
+                                                    <div className="space-y-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {AVAILABLE_APPS.map((app) => (
+                                                            <div
+                                                                key={app.id}
+                                                                className={`group p-4 rounded-2xl border-2 transition-all ${moduleRoles[app.id]
+                                                                        ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-1 ring-blue-600/10'
+                                                                        : 'border-slate-100 bg-white hover:border-slate-200'
+                                                                    }`}
+                                                            >
+                                                                <div
+                                                                    className="flex items-center gap-3 cursor-pointer"
+                                                                    onClick={() => handleToggleModule(app.id, app.roles[0].v)}
+                                                                >
+                                                                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${moduleRoles[app.id]
+                                                                            ? 'border-blue-600 bg-blue-600 text-white'
+                                                                            : 'border-slate-300 bg-white'
+                                                                        }`}>
+                                                                        {moduleRoles[app.id] && <Check className="h-3.5 w-3.5 stroke-[3px]" />}
+                                                                    </div>
+                                                                    <p className={`text-sm font-bold ${moduleRoles[app.id] ? 'text-blue-900' : 'text-slate-700'}`}>
+                                                                        {app.name}
+                                                                    </p>
+                                                                </div>
+
+                                                                {moduleRoles[app.id] && (
+                                                                    <div className="mt-3 ml-8 pt-2 border-t border-blue-200/50 animate-in slide-in-from-top-1 duration-200">
+                                                                        <label className="block text-[10px] font-black uppercase tracking-widest text-blue-700/60 mb-1.5">Rol en {app.name}</label>
+                                                                        <select
+                                                                            value={moduleRoles[app.id]}
+                                                                            onChange={(e) => handleChangeModuleRole(app.id, e.target.value)}
+                                                                            className="w-full rounded-lg border-blue-200 bg-white px-2 py-1 text-xs font-bold text-blue-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                                        >
+                                                                            {app.roles.map(r => (
+                                                                                <option key={r.v} value={r.v}>{r.l}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex gap-3 pt-4">
+                                            <div className="flex gap-4 mt-12 pt-8 border-t border-slate-100">
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowInviteModal(false)}
-                                                    className="flex-1 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                    className="flex-1 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
                                                 >
-                                                    Cancelar
+                                                    Descartar
                                                 </button>
                                                 <button
                                                     type="submit"
                                                     disabled={isInviting}
-                                                    className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                                                    className="flex-[2] px-6 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:grayscale"
                                                 >
-                                                    {isInviting ? "Creando..." : "Crear Usuario"}
+                                                    {isInviting ? "Invitando..." : "Crear Acceso de Empleado"}
                                                 </button>
                                             </div>
                                         </form>

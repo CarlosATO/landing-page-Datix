@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
-        const { email, password, fullName, role, companyId, appAccess } = await request.json();
+        const { email, password, fullName, globalRole, companyId, moduleRoles } = await request.json();
 
         // 1. Inicializar cliente Admin (ignora RLS)
         const supabaseAdmin = createClient(
@@ -22,15 +22,15 @@ export async function POST(request) {
 
         if (authError) throw authError;
 
-        // 3. Vincular usuario a la empresa con sus permisos y apps
+        // 3. Vincular usuario a la empresa con sus permisos y roles por módulo
         const { error: dbError } = await supabaseAdmin
             .from('company_users')
             .insert([{
                 company_id: companyId,
                 user_id: authData.user.id,
-                role: role,
+                role: globalRole,
                 full_name: fullName,
-                app_access: appAccess // Array de strings, ej: ['POS', 'LOGISTICA']
+                module_roles: moduleRoles // Objeto JSON, ej: {"POS": "CASHIER"}
             }]);
 
         if (dbError) throw dbError;
