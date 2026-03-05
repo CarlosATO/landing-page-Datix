@@ -142,50 +142,45 @@ export default function PortalDashboard() {
 
     const handleInviteUser = async (e) => {
         e.preventDefault();
-        if (!inviteEmail || !inviteName || !invitePassword || !company?.id) {
-            alert("Completa todos los campos obligatorios");
-            return;
-        }
-
-        setIsInviting(true);
         try {
-            const response = await fetch('/api/team/invite', {
+            const payload = {
+                email: inviteEmail,
+                password: invitePassword,
+                fullName: inviteName,
+                globalRole: inviteRole,
+                companyId: company.id,
+                moduleRoles: moduleRoles
+            };
+
+            console.log("Enviando payload:", payload);
+
+            const res = await fetch('/api/team/invite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: inviteEmail,
-                    password: invitePassword,
-                    fullName: inviteName,
-                    globalRole: inviteRole,
-                    companyId: company.id,
-                    moduleRoles: moduleRoles
-                })
+                body: JSON.stringify(payload),
             });
 
-            const result = await response.json();
+            const data = await res.json();
 
-            if (result.success) {
-                // Recargar lista
-                const { data: teamData } = await supabase
-                    .from('company_users')
-                    .select('*')
-                    .eq('company_id', company.id);
-                if (teamData) setTeamMembers(teamData);
+            if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
 
-                // Limpiar y cerrar
-                setShowInviteModal(false);
-                setInviteEmail('');
-                setInviteName('');
-                setInvitePassword('');
-                setInviteRole('MEMBER');
-                setModuleRoles({});
-                alert("Empleado invitado con éxito");
-            } else {
-                alert("Error: " + (result.error || "No se pudo invitar"));
-            }
+            // Recargar lista si el componente tiene acceso a la función de carga
+            const { data: teamData } = await supabase
+                .from('company_users')
+                .select('*')
+                .eq('company_id', company.id);
+            if (teamData) setTeamMembers(teamData);
+
+            alert("Usuario invitado con éxito!");
+            setShowInviteModal(false);
+            setInviteEmail('');
+            setInviteName('');
+            setInvitePassword('');
+            setInviteRole('MEMBER');
+            setModuleRoles({});
         } catch (error) {
-            console.error("Error invitando:", error);
-            alert("Error de conexión al invitar");
+            console.error("Error en el cliente:", error);
+            alert(error.message);
         } finally {
             setIsInviting(false);
         }
@@ -516,8 +511,8 @@ export default function PortalDashboard() {
                                                             <div
                                                                 key={app.id}
                                                                 className={`group p-4 rounded-2xl border-2 transition-all ${moduleRoles[app.id]
-                                                                        ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-1 ring-blue-600/10'
-                                                                        : 'border-slate-100 bg-white hover:border-slate-200'
+                                                                    ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-1 ring-blue-600/10'
+                                                                    : 'border-slate-100 bg-white hover:border-slate-200'
                                                                     }`}
                                                             >
                                                                 <div
@@ -525,8 +520,8 @@ export default function PortalDashboard() {
                                                                     onClick={() => handleToggleModule(app.id, app.roles[0].v)}
                                                                 >
                                                                     <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${moduleRoles[app.id]
-                                                                            ? 'border-blue-600 bg-blue-600 text-white'
-                                                                            : 'border-slate-300 bg-white'
+                                                                        ? 'border-blue-600 bg-blue-600 text-white'
+                                                                        : 'border-slate-300 bg-white'
                                                                         }`}>
                                                                         {moduleRoles[app.id] && <Check className="h-3.5 w-3.5 stroke-[3px]" />}
                                                                     </div>
