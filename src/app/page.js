@@ -46,13 +46,13 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4">
             <Link
-              href="#"
+              href="/login"
               className="hidden rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800 sm:block"
             >
               Iniciar Sesión
             </Link>
             <Link
-              href="#"
+              href="/register"
               className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:scale-105 hover:bg-blue-500 active:scale-95"
             >
               Crear Cuenta Gratis
@@ -82,12 +82,14 @@ export default function LandingPage() {
                 >
                   Ver Aplicaciones
                 </Link>
-                <Link
-                  href="#"
+                <a
+                  href="https://calendly.com/calegria1980/demostracion-datix-soluciones-empresariales"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-8 py-4 text-lg font-semibold text-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-50 md:w-auto"
                 >
-                  Hablar con un Asesor
-                </Link>
+                  Agendar una Demo
+                </a>
               </div>
               <p className="mt-6 text-sm font-medium text-slate-500">
                 Sin contratos forzosos. Cancela cuando quieras.
@@ -158,6 +160,14 @@ export default function LandingPage() {
                     Controla el inventario por lotes
                   </li>
                 </ul>
+                <div className="mt-10">
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500"
+                  >
+                    Prueba Gratis
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -190,6 +200,16 @@ export default function LandingPage() {
                     Picking con lector de códigos o app móvil
                   </li>
                 </ul>
+                <div className="mt-10">
+                  <a
+                    href="https://calendly.com/calegria1980/demostracion-datix-soluciones-empresariales"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+                  >
+                    Solicitar Demo
+                  </a>
+                </div>
               </div>
               <div className="flex aspect-video w-full items-center justify-center rounded-3xl bg-slate-100 shadow-inner">
                 <span className="text-sm font-medium text-slate-400 sm:text-base">
@@ -233,6 +253,16 @@ export default function LandingPage() {
                     Historial de gastos por vehículo
                   </li>
                 </ul>
+                <div className="mt-10">
+                  <a
+                    href="https://calendly.com/calegria1980/demostracion-datix-soluciones-empresariales"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+                  >
+                    Solicitar Demo
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -265,6 +295,16 @@ export default function LandingPage() {
                     Emisión automática de liquidaciones de sueldo
                   </li>
                 </ul>
+                <div className="mt-10">
+                  <a
+                    href="https://calendly.com/calegria1980/demostracion-datix-soluciones-empresariales"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+                  >
+                    Solicitar Demo
+                  </a>
+                </div>
               </div>
               <div className="flex aspect-video w-full items-center justify-center rounded-3xl bg-slate-100 shadow-inner">
                 <span className="text-sm font-medium text-slate-400 sm:text-base">
@@ -338,10 +378,10 @@ export default function LandingPage() {
 
             <div className="mt-16 flex justify-center">
               <Link
-                href="#"
+                href="/register"
                 className="rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:-translate-y-1 hover:bg-blue-500"
               >
-                Calcula tu tarifa ahora
+                Comienza tu Prueba Gratis
               </Link>
             </div>
           </div>
