@@ -30,37 +30,68 @@ export async function POST(req) {
         return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
     }
 
-    // 3. Lógica de Negocio (Pago Exitoso)
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
+    // 3. Lógica de Negocio
+    try {
+        switch (event.type) {
+            case 'checkout.session.completed': {
+                const session = event.data.object;
+                const companyId = session.client_reference_id;
+                const customerId = session.customer;
+                const subscriptionId = session.subscription;
 
-        const companyId = session.client_reference_id;
-        const customerId = session.customer;
-        const subscriptionId = session.subscription;
+                if (companyId) {
+                    const { error: updateError } = await supabaseAdmin
+                        .from('companies')
+                        .update({
+                            stripe_customer_id: customerId,
+                            stripe_subscription_id: subscriptionId,
+                            subscription_status: 'active'
+                        })
+                        .eq('id', companyId);
 
-        // Si la sesión de Stripe nos incluyó a qué Ecosistema de Epresesa pertenece este pago
-        if (companyId) {
-            const { error: updateError } = await supabaseAdmin
-                .from('companies')
-                .update({
-                    stripe_customer_id: customerId,
-                    stripe_subscription_id: subscriptionId,
-                    subscription_status: 'active',
-                    plan_type: 'BASE_POS'
-                })
-                .eq('id', companyId);
-
-            if (updateError) {
-                console.error("Error al actualizar la tabla 'companies' en Supabase:", updateError);
-                // Si la BD falla, registramos el error enviándolo con código 500
-                return NextResponse.json({ error: updateError.message }, { status: 500 });
+                    if (updateError) {
+                        console.error("Error al actualizar la tabla 'companies' tras Checkout:", updateError);
+                        throw updateError;
+                    }
+                    console.log(`✅ Pago exitoso. Empresa ${companyId} vinculada a Stripe Customer ${customerId}.`);
+                }
+                break;
             }
 
-            console.log(`Pago procesado con éxito. Empresa ${companyId} actualizada a plan: BASE_POS.`);
-        } else {
-            // Ocurre si al crear la sesión en '/api/stripe/checkout' olvidamos enviar el 'client_reference_id'
-            console.warn("La sesión del Checkout no trajo consigo el 'client_reference_id' (ID de la empresa).");
+            case 'customer.subscription.created':
+            case 'customer.subscription.updated':
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object;
+                const stripeCustomerId = subscription.customer;
+
+                // Extraer el price_id (asumiendo 1 producto base)
+                const priceId = subscription.items.data[0]?.price.id;
+
+                const { error: updateSubError } = await supabaseAdmin
+                    .from('companies')
+                    .update({
+                        stripe_subscription_id: subscription.id,
+                        stripe_price_id: priceId,
+                        subscription_status: subscription.status,
+                        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                    })
+                    .eq('stripe_customer_id', stripeCustomerId);
+
+                if (updateSubError) {
+                    console.error("❌ Error al actualizar la suscripción en 'companies':", updateSubError);
+                    throw updateSubError;
+                }
+
+                console.log(`📦 Estado de suscripción (${subscription.status}) actualizado para Customer: ${stripeCustomerId}`);
+                break;
+            }
+
+            default:
+                console.log(`Evento ignorado: ${event.type}`);
         }
+    } catch (error) {
+        console.error('❌ Error manejando evento de webhook:', error);
+        return NextResponse.json({ error: 'Webhook handler failed.' }, { status: 500 });
     }
 
     // 4. Respuesta Exitosa requerida por Stripe

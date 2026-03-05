@@ -1,78 +1,114 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import {
-    LayoutGrid,
+    LayoutDashboard,
     CreditCard,
     Settings,
     LogOut,
     Store,
-    FileText,
+    Package,
+    Users,
     ExternalLink,
+    FileText
 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 
-// Inicialización de Supabase
+// Inicializa el cliente de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
 export default function PortalDashboard() {
     const router = useRouter();
+
+    const [user, setUser] = useState(null);
+    const [company, setCompany] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [isBillingLoading, setIsBillingLoading] = useState(false);
-    const [companyId, setCompanyId] = useState(null);
-    const [loadingData, setLoadingData] = useState(true);
+    const [activeTab, setActiveTab] = useState('apps');
+    const [userRole, setUserRole] = useState(null);
+    const [team, setTeam] = useState([]); // 'apps' | 'billing'
 
     // Cargar Usuario y Empresa
     useEffect(() => {
         const fetchUserData = async () => {
-            setLoadingData(true);
+            setLoading(true);
             try {
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                const { data: { user: currentUser }, error: sessionError } = await supabase.auth.getUser();
 
-                if (sessionError || !session) {
+                if (sessionError || !currentUser) {
                     console.error("No hay sesión activa.", sessionError);
                     router.push('/login');
                     return;
                 }
 
-                const userId = session.user.id;
+                setUser(currentUser);
 
                 // Buscar a qué empresa pertenece
                 const { data: linkData, error: linkError } = await supabase
                     .from("company_users")
-                    .select("company_id")
-                    .eq("user_id", userId)
+                    .select("company_id, role")
+                    .eq("user_id", currentUser.id)
                     .single();
 
                 if (!linkError && linkData) {
-                    setCompanyId(linkData.company_id);
+                    setUserRole(linkData.role || 'Cajero');
+                    const { data: compData } = await supabase
+                        .from("companies")
+                        .select("*")
+                        .eq("id", linkData.company_id)
+                        .single();
+
+                    if (compData) {
+                        setCompany(compData);
+                        const { data: teamData } = await supabase
+                            .from('company_users')
+                            .select('*')
+                            .eq('company_id', linkData.company_id);
+                        if (teamData) setTeam(teamData);
+                    }
                 }
             } catch (err) {
                 console.error("Error al cargar datos:", err);
             } finally {
-                setLoadingData(false);
+                setLoading(false);
             }
         };
 
         fetchUserData();
     }, [router]);
 
-    const handleSubscribe = async () => {
-        if (!companyId) {
-            alert("No se pudo detectar tu Empresa. Por favor, recarga la página.");
+    const handleLogout = async () => {
+        setLoading(true);
+        await supabase.auth.signOut();
+        router.push('/login');
+    };
+
+    const handleOpenPOS = async (e) => {
+        e.preventDefault();
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+            window.location.href = "http://localhost:5173/pos#access_token=" + data.session.access_token + "&refresh_token=" + data.session.refresh_token;
+        } else {
+            console.error('No se pudo establecer la sesión SSO');
+            router.push('/login');
+        }
+    };
+
+    const handleManageBilling = async () => {
+        if (!company?.id) {
+            alert("No se pudo detectar tu Empresa.");
             return;
         }
 
         setIsBillingLoading(true);
         try {
-            const response = await fetch('/api/stripe/checkout', {
+            const response = await fetch('/api/stripe/portal', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyId: companyId })
+                body: JSON.stringify({ companyId: company.id })
             });
             const data = await response.json();
 
@@ -83,149 +119,391 @@ export default function PortalDashboard() {
                 setIsBillingLoading(false);
             }
         } catch (error) {
-            console.error("Error iniciando pago:", error);
+            console.error("Error abriendo portal:", error);
             setIsBillingLoading(false);
         }
     };
 
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-            {/* Sidebar */}
-            <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white shadow-md">
-                <div className="flex h-20 items-center justify-center border-b border-slate-100">
-                    <span className="text-2xl font-black tracking-tighter text-blue-800">
-                        Datix Hub
+        <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
+            {/* Sidebar (Barra Lateral Izquierda) */}
+            <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
+                <div className="flex h-16 items-center px-6 border-b border-slate-100">
+                    <span className="text-2xl font-black tracking-tighter text-blue-700">
+                        Datix
                     </span>
                 </div>
 
-                <nav className="flex flex-1 flex-col justify-between p-4">
-                    <div className="space-y-2">
-                        <Link
-                            href="/portal"
-                            className="flex items-center gap-3 rounded-xl bg-blue-50 px-4 py-3 font-semibold text-blue-700 transition-colors"
-                        >
-                            <LayoutGrid className="h-5 w-5" />
-                            Mis Aplicaciones
-                        </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-3 rounded-xl px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
-                        >
-                            <CreditCard className="h-5 w-5" />
-                            Suscripción y Pagos
-                        </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-3 rounded-xl px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
-                        >
-                            <Settings className="h-5 w-5" />
-                            Configuración
-                        </Link>
-                    </div>
-
-                    <div>
-                        <Link
-                            href="/"
-                            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600"
-                        >
-                            <LogOut className="h-5 w-5" />
-                            Cerrar Sesión
-                        </Link>
-                    </div>
+                <nav className="flex-1 space-y-1 p-4">
+                    <button
+                        onClick={() => setActiveTab('apps')}
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'apps' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                    >
+                        <LayoutDashboard className={`h-4 w-4 ${activeTab === 'apps' ? 'text-slate-500' : 'text-slate-400'}`} />
+                        Inicio
+                    </button>
+                    {userRole !== 'Cajero' && (
+                        <>
+                            <button
+                                onClick={() => setActiveTab('team')}
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'team' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                            >
+                                <Users className={`h-4 w-4 ${activeTab === 'team' ? 'text-slate-500' : 'text-slate-400'}`} />
+                                Mi Equipo
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('billing')}
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'billing' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                            >
+                                <CreditCard className={`h-4 w-4 ${activeTab === 'billing' ? 'text-slate-500' : 'text-slate-400'}`} />
+                                Facturación
+                            </button>
+                        </>
+                    )}
+                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                        <Settings className="h-4 w-4 text-slate-400" />
+                        Ajustes
+                    </button>
                 </nav>
+
+                <div className="border-t border-slate-100 p-4">
+                    <div className="mb-4 truncate px-3 text-xs text-slate-500 font-medium">
+                        {user?.email}
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-red-50 hover:text-red-700 hover:ring-red-200 transition-all"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Cerrar Sesión
+                    </button>
+                </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="ml-64 flex-1 p-8 sm:p-12">
-                <div className="mx-auto max-w-5xl">
-                    {/* Header */}
-                    <div className="mb-10">
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                            Bienvenido a tu Ecosistema
-                        </h1>
-                        <p className="mt-2 text-lg text-slate-600">
-                            Gestiona tus herramientas empresariales y abre tus módulos contratados.
-                        </p>
-                    </div>
-
-                    {/* Grid de Aplicaciones */}
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        {/* Tarjeta 1 (App Contratada - POS) */}
-                        <div className="relative flex flex-col overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition-shadow hover:shadow-md">
-                            <div className="absolute left-0 top-0 h-1 w-full bg-green-500"></div>
-                            <div className="mb-4 flex items-center justify-between">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                                    <Store className="h-6 w-6" />
+            {/* Área Principal (Main Content) */}
+            <main className="flex-1 overflow-y-auto">
+                <div className="mx-auto max-w-6xl p-8 lg:p-12 border-b border-transparent">
+                    {/* Renderizado de Pestañas */}
+                    {activeTab === 'apps' && (
+                        <>
+                            {/* Cabecera Apps */}
+                            <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                                        Panel de Control
+                                    </h1>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Bienvenido, {company?.name || "Empresa"}
+                                    </p>
                                 </div>
-                                <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                                    Estado: Activo
-                                </span>
-                            </div>
-                            <h3 className="mb-2 text-xl font-bold text-slate-900">
-                                Datix POS & Almacén
-                            </h3>
-                            <p className="mb-6 text-sm text-slate-600">
-                                Punto de venta, control de inventario FEFO y finanzas.
-                            </p>
-                            <div className="mt-auto">
-                                <a
-                                    href="http://localhost:5173"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500"
-                                >
-                                    🚀 Abrir Sistema <ExternalLink className="h-4 w-4" />
-                                </a>
-                            </div>
-                        </div>
+                            </header>
 
-                        {/* Tarjeta 2 (Sugerencia de Venta Cruzada) */}
-                        <div className="relative flex flex-col overflow-hidden rounded-2xl bg-slate-50/50 p-6 shadow-sm ring-1 ring-slate-200 transition-shadow hover:shadow-md">
-                            <div className="mb-4 flex items-center justify-between">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-200 text-slate-500">
-                                    <FileText className="h-6 w-6" />
+                            {/* Grid de Aplicaciones */}
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                {/* Tarjeta 1: Datix POS */}
+                                <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                                    <div>
+                                        <div className="mb-4 flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-500/20">
+                                                <Store className="h-5 w-5" />
+                                            </div>
+                                            <h3 className="font-semibold text-slate-900">Datix POS</h3>
+                                        </div>
+                                        <p className="text-sm text-slate-500 line-clamp-2">
+                                            Punto de venta y control de inventario.
+                                        </p>
+                                    </div>
+                                    <div className="mt-6">
+                                        <a
+                                            href="#"
+                                            onClick={handleOpenPOS}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                                        >
+                                            Abrir Caja <ExternalLink className="h-4 w-4 opacity-70" />
+                                        </a>
+                                    </div>
                                 </div>
-                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
-                                    No contratado
-                                </span>
-                            </div>
-                            <h3 className="mb-2 text-xl font-bold text-slate-500">
-                                Datix Facturación SII
-                            </h3>
-                            <p className="mb-6 text-sm text-slate-500">
-                                Emite boletas electrónicas automáticamente con cada venta.
-                            </p>
-                            <div className="mt-auto">
-                                <Link
-                                    href="#"
-                                    className="flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900"
-                                >
-                                    Ver planes e integrar
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Sección Resumen de Suscripción */}
-                    <div className="mt-12 flex flex-col items-center justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:p-8">
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-900">
-                                Suscripción Actual
-                            </h3>
-                            <p className="mt-1 text-slate-600">
-                                Plan Base - Renovación: 15 de Marzo, 2026.
-                            </p>
+                                {/* Tarjeta 2: Datix Logística */}
+                                <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm opacity-70 hover:opacity-100 transition-all">
+                                    <div>
+                                        <div className="mb-4 flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-500/10">
+                                                <Package className="h-5 w-5" />
+                                            </div>
+                                            <h3 className="font-semibold text-slate-900">Datix Logística</h3>
+                                        </div>
+                                        <p className="text-sm text-slate-500 line-clamp-2">
+                                            Gestión avanzada de almacenes y rutas.
+                                        </p>
+                                    </div>
+                                    <div className="mt-6 flex justify-center">
+                                        <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
+                                            Próximamente
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Tarjeta 3: Datix RRHH */}
+                                <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm opacity-70 hover:opacity-100 transition-all">
+                                    <div>
+                                        <div className="mb-4 flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-500/10">
+                                                <Users className="h-5 w-5" />
+                                            </div>
+                                            <h3 className="font-semibold text-slate-900">Datix RRHH</h3>
+                                        </div>
+                                        <p className="text-sm text-slate-500 line-clamp-2">
+                                            Control de turnos, remuneraciones y capacitaciones.
+                                        </p>
+                                    </div>
+                                    <div className="mt-6 flex justify-center">
+                                        <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
+                                            Próximamente
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+
+                    {activeTab === 'team' && (
+                        <div className="mx-auto max-w-6xl">
+                            <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                                        Mi Equipo
+                                    </h1>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Gestiona el acceso de los empleados a los distintos módulos.
+                                    </p>
+                                </div>
+                                <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors">
+                                    + Añadir Empleado
+                                </button>
+                            </header>
+
+                            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-4 font-semibold">Nombre</th>
+                                            <th className="px-6 py-4 font-semibold">Rol</th>
+                                            <th className="px-6 py-4 font-semibold">Acceso Apps</th>
+                                            <th className="px-6 py-4 font-semibold text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-slate-900">
+                                        {team.map((member, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                                <td className="px-6 py-4 font-medium">{member.full_name || 'Desconocido'}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${member.role === 'Admin' ? 'bg-purple-50 text-purple-700 ring-purple-600/20' : 'bg-slate-100 text-slate-700 ring-slate-500/10'
+                                                        }`}>
+                                                        {member.role || 'Cajero'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {(member.app_access || ['Datix POS']).map(app => (
+                                                            <span key={app} className="inline-flex rounded-md bg-white border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 shadow-sm">{app}</span>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button className="text-blue-600 hover:text-blue-800 font-medium transition-colors focus:outline-none">Editar</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {team.length === 0 && (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
+                                                    No hay empleados registrados en tu equipo.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <button
-                            onClick={handleSubscribe}
-                            disabled={isBillingLoading || loadingData || !companyId}
-                            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                            {isBillingLoading ? "Redirigiendo..." : "Gestionar Pago"}
-                        </button>
-                    </div>
+                    )}
+
+                    {activeTab === 'billing' && (
+                        <div className="mx-auto max-w-4xl">
+                            <header className="mb-8">
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                                    Facturación
+                                </h1>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Gestiona tu plan de suscripción, métodos de pago y facturas de manera segura.
+                                </p>
+                            </header>
+
+                            <div className="space-y-6">
+                                {/* Plan de Suscripción */}
+                                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm pb-0">
+                                    <div className="p-6">
+                                        <h3 className="text-sm font-semibold text-slate-900 mb-1">Plan de Suscripción</h3>
+                                        <p className="text-sm text-slate-500 mb-6">Actualmente estás en el <strong>Plan Base POS</strong>.</p>
+
+                                        <div className="flex justify-between items-center rounded-lg border border-slate-100 bg-slate-50 p-4">
+                                            <div className="w-1/2">
+                                                <p className="text-sm font-medium text-slate-900">Uso de Base de Datos</p>
+                                                <p className="text-xs text-slate-500">Dentro de los límites del plan (0.5GB / 1GB).</p>
+                                            </div>
+                                            <div className="w-1/3 bg-slate-200 rounded-full h-2">
+                                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '50%' }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 px-6 py-4 flex justify-between items-center border-t border-slate-200">
+                                        <p className="text-xs text-slate-500">El pago se procesa de forma segura a través de Stripe.</p>
+                                        <button onClick={handleManageBilling} disabled={isBillingLoading} className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-100 disabled:opacity-50 transition-colors">
+                                            Cambiar plan de suscripción
+                                        </button>
+                                    </div>
+                                </section>
+
+                                {/* Control de Costos */}
+                                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm p-6">
+                                    <h3 className="text-sm font-semibold text-slate-900 mb-1">Control de Costos</h3>
+                                    <p className="text-sm text-slate-500 mb-4">Evita cargos sorpresa limitando los usos adicionales (por encima del plan base).</p>
+                                    <div className="flex items-center gap-3">
+                                        {/* Toggle switch visual */}
+                                        <div className="relative inline-block h-5 w-9 shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out">
+                                            <span className="translate-x-4 pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                                        </div>
+                                        <span className="text-sm font-medium text-slate-900">Spend cap is enabled</span>
+                                    </div>
+                                </section>
+
+                                {/* Próxima Factura */}
+                                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm p-6">
+                                    <h3 className="text-sm font-semibold text-slate-900 mb-1">Próxima Factura</h3>
+                                    <p className="text-sm text-slate-500 mb-4">Estimación del cobro recurrente para tu próximo ciclo.</p>
+                                    <div className="flex items-baseline gap-2 mb-2">
+                                        <span className="text-3xl font-bold text-slate-900">$25.00</span>
+                                        <span className="text-sm font-medium text-slate-500">USD</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500">La facturación se procesará el 15 de Abril, 2026.</p>
+                                </section>
+
+                                {/* Facturas Anteriores */}
+                                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                                    <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-slate-900 mb-1">Facturas Anteriores</h3>
+                                            <p className="text-sm text-slate-500">Revisa o descarga tus recibos mensuales.</p>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-slate-50 text-slate-500">
+                                                <tr>
+                                                    <th className="px-6 py-3 font-medium">Fecha</th>
+                                                    <th className="px-6 py-3 font-medium">Monto</th>
+                                                    <th className="px-6 py-3 font-medium">Factura</th>
+                                                    <th className="px-6 py-3 font-medium">Estado</th>
+                                                    <th className="px-6 py-3 font-medium text-right">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 bg-white text-slate-900">
+                                                {[
+                                                    { date: '15 Mar, 2026', amount: '$25.00', invoice: '#INV-003' },
+                                                    { date: '15 Feb, 2026', amount: '$25.00', invoice: '#INV-002' },
+                                                    { date: '15 Ene, 2026', amount: '$25.00', invoice: '#INV-001' }
+                                                ].map((item, idx) => (
+                                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-4">{item.date}</td>
+                                                        <td className="px-6 py-4">{item.amount}</td>
+                                                        <td className="px-6 py-4">{item.invoice}</td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                                                Pagado
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <button onClick={handleManageBilling} className="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                                                                Descargar
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+
+                                {/* Métodos de Pago */}
+                                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm p-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-slate-900 mb-1">Método de Pago</h3>
+                                            <p className="text-sm text-slate-500">Tarjetas de crédito o débito vinculadas.</p>
+                                        </div>
+                                        <button onClick={handleManageBilling} disabled={isBillingLoading} className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-100 disabled:opacity-50 transition-colors">
+                                            Añadir nueva tarjeta
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-10 w-14 shrink-0 items-center justify-center rounded bg-white shadow-sm border border-slate-200">
+                                                <span className="text-[10px] font-black italic text-blue-900 leading-none">VISA</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900">Visa terminada en 4242</p>
+                                                <p className="text-xs text-slate-500">Expira en 12/28</p>
+                                            </div>
+                                        </div>
+                                        <span className="inline-flex shrink-0 items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                                            Principal activa
+                                        </span>
+                                    </div>
+                                </section>
+
+                                {/* Datos de Facturación */}
+                                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm pb-0">
+                                    <div className="p-6">
+                                        <h3 className="text-sm font-semibold text-slate-900 mb-1">Datos de Facturación</h3>
+                                        <p className="text-sm text-slate-500 mb-6">Información fiscal para la emisión de tus recibos.</p>
+
+                                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 max-w-2xl">
+                                            <div className="col-span-1 sm:col-span-2">
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico (Recibos)</label>
+                                                <input type="email" disabled value={user?.email || "cargando..."} className="block w-full rounded-md border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-sm ring-1 ring-inset ring-slate-200 cursor-not-allowed" />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Dirección de facturación</label>
+                                                <input type="text" disabled value="Avenida Providencia 1234, Santiago" className="block w-full rounded-md border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-sm ring-1 ring-inset ring-slate-200 cursor-not-allowed" />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">RUT / Identificación Fiscal</label>
+                                                <input type="text" disabled value="76.123.456-K" className="block w-full rounded-md border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-sm ring-1 ring-inset ring-slate-200 cursor-not-allowed" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-200">
+                                        <button onClick={handleManageBilling} disabled={isBillingLoading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 transition-colors">
+                                            Actualizar datos
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }

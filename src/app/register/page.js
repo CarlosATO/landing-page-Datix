@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import {
     Building2,
     User,
@@ -19,7 +19,7 @@ import {
 // Inicializa el cliente de Supabase (fuera del componente para evitar re-creación)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
 export default function RegisterPage() {
     const router = useRouter();
