@@ -29,7 +29,19 @@ export default function PortalDashboard() {
     const [isBillingLoading, setIsBillingLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('apps');
     const [userRole, setUserRole] = useState(null);
-    const [team, setTeam] = useState([]); // 'apps' | 'billing'
+    const [team, setTeam] = useState([]);
+
+    // Estados para Gestión de Equipo
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [isInviting, setIsInviting] = useState(false);
+
+    // Formulario de Invitación
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteName, setInviteName] = useState('');
+    const [invitePassword, setInvitePassword] = useState('');
+    const [inviteRole, setInviteRole] = useState('CASHIER');
+    const [inviteApps, setInviteApps] = useState(['POS']);
 
     // Cargar Usuario y Empresa
     useEffect(() => {
@@ -63,11 +75,15 @@ export default function PortalDashboard() {
 
                     if (compData) {
                         setCompany(compData);
-                        const { data: teamData } = await supabase
-                            .from('company_users')
-                            .select('*')
-                            .eq('company_id', linkData.company_id);
-                        if (teamData) setTeam(teamData);
+
+                        // Si es Owner o Manager, cargar equipo
+                        if (linkData.role === 'OWNER' || linkData.role === 'MANAGER') {
+                            const { data: teamData } = await supabase
+                                .from('company_users')
+                                .select('*')
+                                .eq('company_id', linkData.company_id);
+                            if (teamData) setTeamMembers(teamData);
+                        }
                     }
                 }
             } catch (err) {
@@ -94,6 +110,57 @@ export default function PortalDashboard() {
         } else {
             console.error('No se pudo establecer la sesión SSO');
             router.push('/login');
+        }
+    };
+
+    const handleInviteUser = async (e) => {
+        e.preventDefault();
+        if (!inviteEmail || !inviteName || !invitePassword || !company?.id) {
+            alert("Completa todos los campos obligatorios");
+            return;
+        }
+
+        setIsInviting(true);
+        try {
+            const response = await fetch('/api/team/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: inviteEmail,
+                    password: invitePassword,
+                    fullName: inviteName,
+                    role: inviteRole,
+                    companyId: company.id,
+                    appAccess: inviteApps
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Recargar lista
+                const { data: teamData } = await supabase
+                    .from('company_users')
+                    .select('*')
+                    .eq('company_id', company.id);
+                if (teamData) setTeamMembers(teamData);
+
+                // Limpiar y cerrar
+                setShowInviteModal(false);
+                setInviteEmail('');
+                setInviteName('');
+                setInvitePassword('');
+                setInviteRole('CASHIER');
+                setInviteApps(['POS']);
+                alert("Empleado invitado con éxito");
+            } else {
+                alert("Error: " + (result.error || "No se pudo invitar"));
+            }
+        } catch (error) {
+            console.error("Error invitando:", error);
+            alert("Error de conexión al invitar");
+        } finally {
+            setIsInviting(false);
         }
     };
 
@@ -283,14 +350,17 @@ export default function PortalDashboard() {
                             <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                                        Mi Equipo
+                                        Gestión de Equipo
                                     </h1>
                                     <p className="mt-1 text-sm text-slate-500">
-                                        Gestiona el acceso de los empleados a los distintos módulos.
+                                        Administra los accesos y roles de tus colaboradores.
                                     </p>
                                 </div>
-                                <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors">
-                                    + Añadir Empleado
+                                <button
+                                    onClick={() => setShowInviteModal(true)}
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                                >
+                                    + Invitar Miembro
                                 </button>
                             </header>
 
@@ -305,20 +375,23 @@ export default function PortalDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-slate-900">
-                                        {team.map((member, idx) => (
+                                        {teamMembers.map((member, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
                                                 <td className="px-6 py-4 font-medium">{member.full_name || 'Desconocido'}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${member.role === 'Admin' ? 'bg-purple-50 text-purple-700 ring-purple-600/20' : 'bg-slate-100 text-slate-700 ring-slate-500/10'
+                                                    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${member.role === 'OWNER' ? 'bg-purple-50 text-purple-700 ring-purple-600/20' :
+                                                        member.role === 'MANAGER' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
+                                                            'bg-green-50 text-green-700 ring-green-600/20'
                                                         }`}>
-                                                        {member.role || 'Cajero'}
+                                                        {member.role || 'CASHIER'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                        {(member.app_access || ['Datix POS']).map(app => (
+                                                        {(member.app_access || []).map(app => (
                                                             <span key={app} className="inline-flex rounded-md bg-white border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 shadow-sm">{app}</span>
                                                         ))}
+                                                        {(!member.app_access || member.app_access.length === 0) && <span className="text-slate-400 italic">Sin acceso</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -326,16 +399,114 @@ export default function PortalDashboard() {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {team.length === 0 && (
+                                        {teamMembers.length === 0 && (
                                             <tr>
-                                                <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
-                                                    No hay empleados registrados en tu equipo.
+                                                <td colSpan="4" className="px-6 py-12 text-center">
+                                                    <Users className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+                                                    <p className="text-slate-500">No hay empleados registrados en tu equipo.</p>
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Modal de Invitación */}
+                            {showInviteModal && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                                    <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                                        <div className="p-6 border-b border-slate-100">
+                                            <h3 className="text-xl font-bold text-slate-900">Invitar a un nuevo miembro</h3>
+                                            <p className="text-sm text-slate-500 mt-1">Se creará una cuenta de acceso inmediata.</p>
+                                        </div>
+                                        <form onSubmit={handleInviteUser} className="p-6 space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Nombre Completo</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={inviteName}
+                                                    onChange={(e) => setInviteName(e.target.value)}
+                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
+                                                    placeholder="Juan Pérez"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Correo Electrónico</label>
+                                                <input
+                                                    type="email"
+                                                    required
+                                                    value={inviteEmail}
+                                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
+                                                    placeholder="juan@empresa.com"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Contraseña Temporal</label>
+                                                <input
+                                                    type="password"
+                                                    required
+                                                    value={invitePassword}
+                                                    onChange={(e) => setInvitePassword(e.target.value)}
+                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
+                                                    placeholder="********"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Rol del Empleado</label>
+                                                <select
+                                                    value={inviteRole}
+                                                    onChange={(e) => setInviteRole(e.target.value)}
+                                                    className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
+                                                >
+                                                    <option value="CASHIER">Cajero (Solo POS)</option>
+                                                    <option value="MANAGER">Manager (Maneja el Equipo)</option>
+                                                    <option value="STOCKER">Almacén (Solo Inventario)</option>
+                                                    <option value="OWNER">Dueño (Acceso Total)</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Acceso a Aplicaciones</label>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {['POS', 'LOGISTICA', 'RRHH'].map((app) => (
+                                                        <label key={app} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={inviteApps.includes(app)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) setInviteApps([...inviteApps, app]);
+                                                                    else setInviteApps(inviteApps.filter(a => a !== app));
+                                                                }}
+                                                                className="rounded text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <span className="text-xs font-semibold text-slate-700">{app}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-3 pt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowInviteModal(false)}
+                                                    className="flex-1 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={isInviting}
+                                                    className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                                                >
+                                                    {isInviting ? "Creando..." : "Crear Usuario"}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
