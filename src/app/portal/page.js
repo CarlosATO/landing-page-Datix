@@ -121,6 +121,17 @@ export default function PortalDashboard() {
         }
     };
 
+    const handleOpenAdquisiciones = async (e) => {
+        e.preventDefault();
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+            window.location.href = "http://localhost:5174/#access_token=" + data.session.access_token + "&refresh_token=" + data.session.refresh_token;
+        } else {
+            console.error('No se pudo establecer la sesión SSO');
+            router.push('/login');
+        }
+    };
+
     const handleToggleModule = (appId, defaultRole) => {
         setModuleRoles(prev => {
             const next = { ...prev };
@@ -221,6 +232,8 @@ export default function PortalDashboard() {
         );
     }
 
+    const isSubscriptionActive = company?.subscription_status === 'active' || company?.subscription_status === 'trialing';
+
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
             {/* Sidebar (Barra Lateral Izquierda) */}
@@ -298,28 +311,58 @@ export default function PortalDashboard() {
                             {/* Grid de Aplicaciones */}
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {/* Tarjeta 1: Datix POS */}
-                                <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                                <div className={`group relative flex flex-col justify-between overflow-hidden rounded-xl border p-6 shadow-sm transition-all hover:shadow-md ${isSubscriptionActive ? 'border-slate-200 bg-white' : 'border-red-300 bg-red-50/50'}`}>
                                     <div>
-                                        <div className="mb-4 flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-500/20">
-                                                <Store className="h-5 w-5" />
+                                        <div className="mb-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${isSubscriptionActive ? 'bg-blue-50 text-blue-600 ring-blue-500/20' : 'bg-red-100 text-red-600 ring-red-500/30'}`}>
+                                                    <Store className="h-5 w-5" />
+                                                </div>
+                                                <h3 className="font-semibold text-slate-900">Datix POS</h3>
                                             </div>
-                                            <h3 className="font-semibold text-slate-900">Datix POS</h3>
+                                            {!isSubscriptionActive && (
+                                                <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-800 border border-red-200">
+                                                    Suscripción Inactiva
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-sm text-slate-500 line-clamp-2">
                                             Punto de venta y control de inventario.
                                         </p>
                                     </div>
                                     <div className="mt-6">
-                                        <a
-                                            href="#"
-                                            onClick={handleOpenPOS}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
-                                        >
-                                            Abrir Caja <ExternalLink className="h-4 w-4 opacity-70" />
-                                        </a>
+                                        {isSubscriptionActive ? (
+                                            <a
+                                                href="#"
+                                                onClick={handleOpenPOS}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                                            >
+                                                Abrir Caja <ExternalLink className="h-4 w-4 opacity-70" />
+                                            </a>
+                                        ) : (
+                                            userRole === 'OWNER' || userRole === 'MANAGER' ? (
+                                                <button
+                                                    onClick={handleManageBilling}
+                                                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 transition-colors"
+                                                >
+                                                    Actualizar Método de Pago <CreditCard className="h-4 w-4 opacity-70" />
+                                                </button>
+                                            ) : (
+                                                <div className="flex flex-col gap-2">
+                                                    <button
+                                                        disabled
+                                                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-400 cursor-not-allowed"
+                                                    >
+                                                        Abrir Caja <ExternalLink className="h-4 w-4 opacity-50" />
+                                                    </button>
+                                                    <p className="text-[10px] text-red-600 font-medium text-center leading-tight">
+                                                        Sistema bloqueado por falta de pago.<br/>Contacte al administrador de su local.
+                                                    </p>
+                                                </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
 
@@ -360,6 +403,62 @@ export default function PortalDashboard() {
                                         <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
                                             Próximamente
                                         </span>
+                                    </div>
+                                </div>
+
+                                {/* Tarjeta 4: Datix Adquisiciones */}
+                                <div className={`group relative flex flex-col justify-between overflow-hidden rounded-xl border p-6 shadow-sm transition-all hover:shadow-md ${isSubscriptionActive ? 'border-slate-200 bg-white' : 'border-red-300 bg-red-50/50'}`}>
+                                    <div>
+                                        <div className="mb-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${isSubscriptionActive ? 'bg-blue-50 text-blue-600 ring-blue-500/20' : 'bg-red-100 text-red-600 ring-red-500/30'}`}>
+                                                    <FileText className="h-5 w-5" />
+                                                </div>
+                                                <h3 className="font-semibold text-slate-900">Datix Adquisiciones</h3>
+                                            </div>
+                                            {!isSubscriptionActive && (
+                                                <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-800 border border-red-200">
+                                                    Suscripción Inactiva
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-slate-500 line-clamp-2">
+                                            Gestión de compras y proveedores.
+                                        </p>
+                                    </div>
+                                    <div className="mt-6">
+                                        {isSubscriptionActive ? (
+                                            <a
+                                                href="#"
+                                                onClick={handleOpenAdquisiciones}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                                            >
+                                                Abrir Adquisiciones <ExternalLink className="h-4 w-4 opacity-70" />
+                                            </a>
+                                        ) : (
+                                            userRole === 'OWNER' || userRole === 'MANAGER' ? (
+                                                <button
+                                                    onClick={handleManageBilling}
+                                                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 transition-colors"
+                                                >
+                                                    Actualizar Método de Pago <CreditCard className="h-4 w-4 opacity-70" />
+                                                </button>
+                                            ) : (
+                                                <div className="flex flex-col gap-2">
+                                                    <button
+                                                        disabled
+                                                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-400 cursor-not-allowed"
+                                                    >
+                                                        Abrir Adquisiciones <ExternalLink className="h-4 w-4 opacity-50" />
+                                                    </button>
+                                                    <p className="text-[10px] text-red-600 font-medium text-center leading-tight">
+                                                        Sistema bloqueado por falta de pago.<br/>Contacte al administrador de su local.
+                                                    </p>
+                                                </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
                             </div>

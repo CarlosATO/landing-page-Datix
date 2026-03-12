@@ -58,9 +58,7 @@ export async function POST(req) {
                 break;
             }
 
-            case 'customer.subscription.created':
-            case 'customer.subscription.updated':
-            case 'customer.subscription.deleted': {
+            case 'customer.subscription.created': {
                 const subscription = event.data.object;
                 const stripeCustomerId = subscription.customer;
 
@@ -83,6 +81,26 @@ export async function POST(req) {
                 }
 
                 console.log(`📦 Estado de suscripción (${subscription.status}) actualizado para Customer: ${stripeCustomerId}`);
+                break;
+            }
+
+            case 'customer.subscription.updated':
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object;
+                const stripeCustomerId = subscription.customer;
+                const status = subscription.status; // Puede ser 'active', 'past_due', 'canceled', 'unpaid'
+
+                // Actualizar el estado en la base de datos
+                const { error } = await supabaseAdmin
+                    .from('companies')
+                    .update({ subscription_status: status })
+                    .eq('stripe_customer_id', stripeCustomerId);
+
+                if (error) {
+                    console.error('Error actualizando estado de suscripción:', error);
+                } else {
+                    console.log(`Suscripción de cliente ${stripeCustomerId} actualizada a: ${status}`);
+                }
                 break;
             }
 
