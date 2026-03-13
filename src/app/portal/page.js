@@ -16,6 +16,8 @@ import {
     Check
 } from "lucide-react";
 
+const BRAND_PRIMARY = '#4C3073';
+
 const AVAILABLE_APPS = [
     { id: 'POS', name: 'Caja POS', reversed: false, roles: [{ v: 'CASHIER', l: 'Cajero' }, { v: 'MANAGER', l: 'Jefe de Local' }] },
     { id: 'LOGISTICA', name: 'Logística', roles: [{ v: 'STOCKER', l: 'Bodeguero' }, { v: 'MANAGER', l: 'Jefe de Operaciones' }] },
@@ -41,7 +43,7 @@ export default function PortalDashboard() {
 
     // Estados para Gestión de Equipo
     const [teamMembers, setTeamMembers] = useState([]);
-    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [teamViewMode, setTeamViewMode] = useState('list'); // 'list' | 'form'
     const [isInviting, setIsInviting] = useState(false);
 
     // Formulario de Invitación
@@ -183,7 +185,7 @@ export default function PortalDashboard() {
             if (teamData) setTeamMembers(teamData);
 
             alert("Usuario invitado con éxito!");
-            setShowInviteModal(false);
+            setTeamViewMode('list');
             setInviteEmail('');
             setInviteName('');
             setInvitePassword('');
@@ -227,7 +229,10 @@ export default function PortalDashboard() {
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-50">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+                <div 
+                  style={{ borderTopColor: BRAND_PRIMARY }}
+                  className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200"
+                ></div>
             </div>
         );
     }
@@ -239,7 +244,10 @@ export default function PortalDashboard() {
             {/* Sidebar (Barra Lateral Izquierda) */}
             <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
                 <div className="flex h-16 items-center px-6 border-b border-slate-100">
-                    <span className="text-2xl font-black tracking-tighter text-blue-700">
+                    <span 
+                      style={{ color: BRAND_PRIMARY }}
+                      className="text-2xl font-black tracking-tighter"
+                    >
                         Datix
                     </span>
                 </div>
@@ -247,25 +255,25 @@ export default function PortalDashboard() {
                 <nav className="flex-1 space-y-1 p-4">
                     <button
                         onClick={() => setActiveTab('apps')}
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'apps' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'apps' ? 'bg-brand-light/20 text-brand-primary' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
                     >
-                        <LayoutDashboard className={`h-4 w-4 ${activeTab === 'apps' ? 'text-slate-500' : 'text-slate-400'}`} />
+                        <LayoutDashboard className={`h-4 w-4 ${activeTab === 'apps' ? 'text-brand-primary/70' : 'text-slate-400'}`} />
                         Inicio
                     </button>
                     {userRole !== 'Cajero' && (
                         <>
                             <button
                                 onClick={() => setActiveTab('team')}
-                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'team' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'team' ? 'bg-brand-light/20 text-brand-primary' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
                             >
-                                <Users className={`h-4 w-4 ${activeTab === 'team' ? 'text-slate-500' : 'text-slate-400'}`} />
+                                <Users className={`h-4 w-4 ${activeTab === 'team' ? 'text-brand-primary/70' : 'text-slate-400'}`} />
                                 Mi Equipo
                             </button>
                             <button
                                 onClick={() => setActiveTab('billing')}
-                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'billing' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'billing' ? 'bg-brand-light/20 text-brand-primary' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
                             >
-                                <CreditCard className={`h-4 w-4 ${activeTab === 'billing' ? 'text-slate-500' : 'text-slate-400'}`} />
+                                <CreditCard className={`h-4 w-4 ${activeTab === 'billing' ? 'text-brand-primary/70' : 'text-slate-400'}`} />
                                 Facturación
                             </button>
                         </>
@@ -315,7 +323,10 @@ export default function PortalDashboard() {
                                     <div>
                                         <div className="mb-4 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${isSubscriptionActive ? 'bg-blue-50 text-blue-600 ring-blue-500/20' : 'bg-red-100 text-red-600 ring-red-500/30'}`}>
+                                                <div 
+                                                  style={isSubscriptionActive ? { backgroundColor: `${BRAND_PRIMARY}1a`, color: BRAND_PRIMARY, borderColor: `${BRAND_PRIMARY}33` } : {}}
+                                                  className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${isSubscriptionActive ? '' : 'bg-red-100 text-red-600 ring-red-500/30'}`}
+                                                >
                                                     <Store className="h-5 w-5" />
                                                 </div>
                                                 <h3 className="font-semibold text-slate-900">Datix POS</h3>
@@ -337,7 +348,8 @@ export default function PortalDashboard() {
                                                 onClick={handleOpenPOS}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                                                style={{ backgroundColor: BRAND_PRIMARY }}
+                                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg text-white shadow-sm hover:bg-brand-accent transition-colors px-4 py-2 text-sm font-semibold"
                                             >
                                                 Abrir Caja <ExternalLink className="h-4 w-4 opacity-70" />
                                             </a>
@@ -411,7 +423,9 @@ export default function PortalDashboard() {
                                     <div>
                                         <div className="mb-4 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${isSubscriptionActive ? 'bg-blue-50 text-blue-600 ring-blue-500/20' : 'bg-red-100 text-red-600 ring-red-500/30'}`}>
+                                                <div 
+                                                  style={isSubscriptionActive ? { backgroundColor: `${BRAND_PRIMARY}1a`, color: BRAND_PRIMARY, borderColor: `${BRAND_PRIMARY}33` } : {}}
+                                                  className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${isSubscriptionActive ? '' : 'bg-red-100 text-red-600 ring-red-500/30'}`}>
                                                     <FileText className="h-5 w-5" />
                                                 </div>
                                                 <h3 className="font-semibold text-slate-900">Datix Adquisiciones</h3>
@@ -433,7 +447,8 @@ export default function PortalDashboard() {
                                                 onClick={handleOpenAdquisiciones}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                                                style={{ backgroundColor: BRAND_PRIMARY }}
+                                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg text-white shadow-sm hover:bg-brand-accent transition-colors px-4 py-2 text-sm font-semibold"
                                             >
                                                 Abrir Adquisiciones <ExternalLink className="h-4 w-4 opacity-70" />
                                             </a>
@@ -468,133 +483,170 @@ export default function PortalDashboard() {
 
                     {activeTab === 'team' && (
                         <div className="mx-auto max-w-6xl">
+                            {/* Odoo Style Control Panel */}
                             <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
+                                    <nav className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                                        <button 
+                                          onClick={() => setTeamViewMode('list')}
+                                          className={`hover:text-brand-primary transition-colors ${teamViewMode === 'list' ? 'font-bold' : ''}`}
+                                          style={teamViewMode === 'list' ? { color: BRAND_PRIMARY } : {}}
+                                        >
+                                            Mi Equipo
+                                        </button>
+                                        {teamViewMode === 'form' && (
+                                            <>
+                                                <span>/</span>
+                                                <span className="font-bold" style={{ color: BRAND_PRIMARY }}>Nuevo</span>
+                                            </>
+                                        )}
+                                    </nav>
                                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                                        Gestión de Equipo
+                                        {teamViewMode === 'list' ? 'Mi Equipo' : 'Nuevo Colaborador'}
                                     </h1>
-                                    <p className="mt-1 text-sm text-slate-500">
-                                        Administra los accesos y roles de tus colaboradores.
-                                    </p>
                                 </div>
-                                <button
-                                    onClick={() => setShowInviteModal(true)}
-                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
-                                >
-                                    + Invitar Miembro
-                                </button>
+                                
+                                <div className="flex items-center gap-3">
+                                    {teamViewMode === 'list' ? (
+                                        <button
+                                            onClick={() => setTeamViewMode('form')}
+                                            style={{ backgroundColor: BRAND_PRIMARY }}
+                                            className="inline-flex items-center justify-center gap-2 rounded-lg text-white shadow-sm hover:hover:bg-brand-accent transition-colors px-4 py-2 text-sm font-semibold"
+                                        >
+                                            + Invitar Miembro
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button
+                                              onClick={handleInviteUser}
+                                              disabled={isInviting}
+                                              style={{ backgroundColor: BRAND_PRIMARY }}
+                                              className="inline-flex items-center justify-center gap-2 rounded-lg text-white shadow-sm hover:bg-brand-accent transition-colors px-6 py-2 text-sm font-semibold"
+                                            >
+                                              {isInviting ? "Invitando..." : "Guardar"}
+                                            </button>
+                                            <button
+                                              onClick={() => setTeamViewMode('list')}
+                                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50 transition-colors px-6 py-2 text-sm font-semibold"
+                                            >
+                                              Descartar
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </header>
 
-                            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                                <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                        <tr>
-                                            <th className="px-6 py-4 font-semibold">Nombre</th>
-                                            <th className="px-6 py-4 font-semibold">Rol</th>
-                                            <th className="px-6 py-4 font-semibold">Acceso Apps</th>
-                                            <th className="px-6 py-4 font-semibold text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 text-slate-900">
-                                        {teamMembers.map((member, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                                                <td className="px-6 py-4 font-medium">{member.full_name || 'Desconocido'}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${member.role === 'OWNER' ? 'bg-purple-50 text-purple-700 ring-purple-600/20' :
-                                                        member.role === 'MANAGER' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
-                                                            'bg-green-50 text-green-700 ring-green-600/20'
-                                                        }`}>
-                                                        {member.role || 'CASHIER'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        {member.module_roles && Object.entries(member.module_roles).map(([appId, role]) => (
-                                                            <span key={appId} className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 uppercase tracking-wider">
-                                                                {appId}: {role}
-                                                            </span>
-                                                        ))}
-                                                        {(!member.module_roles || Object.keys(member.module_roles).length === 0) && <span className="text-slate-400 italic text-xs">Sin acceso</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button className="text-blue-600 hover:text-blue-800 font-medium transition-colors focus:outline-none">Editar</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {teamMembers.length === 0 && (
+                            {teamViewMode === 'list' ? (
+                                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm whitespace-nowrap">
+                                        <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                                             <tr>
-                                                <td colSpan="4" className="px-6 py-12 text-center">
-                                                    <Users className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-                                                    <p className="text-slate-500">No hay empleados registrados en tu equipo.</p>
-                                                </td>
+                                                <th className="px-6 py-4 font-semibold">Nombre</th>
+                                                <th className="px-6 py-4 font-semibold">Rol</th>
+                                                <th className="px-6 py-4 font-semibold">Acceso Apps</th>
+                                                <th className="px-6 py-4 font-semibold text-right">Acciones</th>
                                             </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Modal de Invitación */}
-                            {showInviteModal && (
-                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md">
-                                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
-                                        <div className="p-8 border-b border-slate-100 flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Invitar Miembro</h3>
-                                                <p className="text-sm text-slate-500 mt-1 font-medium">Configura el perfil y los roles por módulo.</p>
-                                            </div>
-                                            <button
-                                                onClick={() => setShowInviteModal(false)}
-                                                className="text-slate-400 hover:text-slate-600 transition-colors"
-                                            >
-                                                <LogOut className="h-6 w-6 rotate-180" />
-                                            </button>
-                                        </div>
-
-                                        <form onSubmit={handleInviteUser} className="p-8">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                                {/* Columna Izquierda: Datos */}
-                                                <div className="space-y-5">
-                                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Datos Básicos</h4>
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Nombre Completo</label>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-slate-900">
+                                            {teamMembers.map((member, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                                    <td className="px-6 py-4 font-medium">{member.full_name || 'Desconocido'}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${member.role === 'OWNER' ? 'bg-purple-50 text-purple-700 ring-purple-600/20' :
+                                                            member.role === 'MANAGER' ? 'bg-brand-light/20 text-brand-primary ring-brand-primary/20' :
+                                                                'bg-green-50 text-green-700 ring-green-600/20'
+                                                            }`}>
+                                                            {member.role || 'CASHIER'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            {member.module_roles && Object.entries(member.module_roles).map(([appId, role]) => (
+                                                                <span 
+                                                                  key={appId} 
+                                                                  style={{ backgroundColor: `${BRAND_PRIMARY}1a`, color: BRAND_PRIMARY, borderColor: `${BRAND_PRIMARY}1a` }}
+                                                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset uppercase tracking-wider"
+                                                                >
+                                                                    {appId}: {role}
+                                                                </span>
+                                                            ))}
+                                                            {(!member.module_roles || Object.keys(member.module_roles).length === 0) && <span className="text-slate-400 italic text-xs">Sin acceso</span>}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button 
+                                                          style={{ color: BRAND_PRIMARY }}
+                                                          className="hover:opacity-80 font-medium transition-colors focus:outline-none"
+                                                        >
+                                                            Editar
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {teamMembers.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="4" className="px-6 py-12 text-center">
+                                                        <Users className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+                                                        <p className="text-slate-500">No hay empleados registrados en tu equipo.</p>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                /* Odoo Style Form View */
+                                <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="p-8">
+                                        <form className="max-w-5xl">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8">
+                                                {/* Sección Izquierda */}
+                                                <div className="space-y-6">
+                                                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-6">Datos del Colaborador</h3>
+                                                    
+                                                    {/* Campo Odoo Style: Label a la izquierda, Input a la derecha */}
+                                                    <div className="grid grid-cols-3 items-center gap-4">
+                                                        <label className="text-sm font-medium text-slate-500 text-right">Nombre</label>
                                                         <input
                                                             type="text"
                                                             required
                                                             value={inviteName}
                                                             onChange={(e) => setInviteName(e.target.value)}
-                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            className="col-span-2 rounded-md border-slate-200 bg-white py-1.5 text-sm focus:border-brand-primary focus:ring-brand-primary transition-all"
                                                             placeholder="ej. Juan Pérez"
                                                         />
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Correo Electrónico</label>
+
+                                                    <div className="grid grid-cols-3 items-center gap-4">
+                                                        <label className="text-sm font-medium text-slate-500 text-right">Email</label>
                                                         <input
                                                             type="email"
                                                             required
                                                             value={inviteEmail}
                                                             onChange={(e) => setInviteEmail(e.target.value)}
-                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            className="col-span-2 rounded-md border-slate-200 bg-white py-1.5 text-sm focus:border-brand-primary focus:ring-brand-primary transition-all"
                                                             placeholder="juan@datix.cl"
                                                         />
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Contraseña Temporal</label>
+
+                                                    <div className="grid grid-cols-3 items-center gap-4">
+                                                        <label className="text-sm font-medium text-slate-500 text-right">Contraseña</label>
                                                         <input
                                                             type="password"
                                                             required
                                                             value={invitePassword}
                                                             onChange={(e) => setInvitePassword(e.target.value)}
-                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            className="col-span-2 rounded-md border-slate-200 bg-white py-1.5 text-sm focus:border-brand-primary focus:ring-brand-primary transition-all"
                                                             placeholder="••••••••"
                                                         />
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Rol en Datix Hub (Portal)</label>
+
+                                                    <div className="grid grid-cols-3 items-center gap-4">
+                                                        <label className="text-sm font-medium text-slate-500 text-right">Rol Portal</label>
                                                         <select
                                                             value={inviteRole}
                                                             onChange={(e) => setInviteRole(e.target.value)}
-                                                            className="w-full rounded-xl border-slate-200 bg-slate-50/50 py-2.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                            className="col-span-2 rounded-md border-slate-200 bg-white py-1.5 text-sm focus:border-brand-primary focus:ring-brand-primary transition-all"
                                                         >
                                                             <option value="MEMBER">Miembro / Empleado Base</option>
                                                             <option value="OWNER">Dueño / Admin Total</option>
@@ -602,68 +654,49 @@ export default function PortalDashboard() {
                                                     </div>
                                                 </div>
 
-                                                {/* Columna Derecha: Accesos */}
+                                                {/* Sección Derecha: Accesos */}
                                                 <div className="space-y-4">
-                                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Accesos a Módulos</h4>
-                                                    <div className="space-y-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+                                                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-6">Permisos por Módulo</h3>
+                                                    <div className="grid grid-cols-1 gap-3">
                                                         {AVAILABLE_APPS.map((app) => (
                                                             <div
                                                                 key={app.id}
-                                                                className={`group p-4 rounded-2xl border-2 transition-all ${moduleRoles[app.id]
-                                                                    ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-1 ring-blue-600/10'
-                                                                    : 'border-slate-100 bg-white hover:border-slate-200'
+                                                                className={`p-3 rounded-lg border transition-all ${moduleRoles[app.id]
+                                                                    ? 'bg-brand-light/5 border-brand-primary/30 shadow-sm'
+                                                                    : 'border-slate-100 bg-slate-50/30'
                                                                     }`}
                                                             >
                                                                 <div
-                                                                    className="flex items-center gap-3 cursor-pointer"
+                                                                    className="flex items-center justify-between cursor-pointer"
                                                                     onClick={() => handleToggleModule(app.id, app.roles[0].v)}
                                                                 >
-                                                                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${moduleRoles[app.id]
-                                                                        ? 'border-blue-600 bg-blue-600 text-white'
-                                                                        : 'border-slate-300 bg-white'
-                                                                        }`}>
-                                                                        {moduleRoles[app.id] && <Check className="h-3.5 w-3.5 stroke-[3px]" />}
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div 
+                                                                          style={moduleRoles[app.id] ? { backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY } : {}}
+                                                                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${moduleRoles[app.id] ? 'text-white' : 'border-slate-300 bg-white'}`}
+                                                                        >
+                                                                            {moduleRoles[app.id] && <Check className="h-2.5 w-2.5 stroke-[3px]" />}
+                                                                        </div>
+                                                                        <span className={`text-sm font-bold ${moduleRoles[app.id] ? 'text-brand-primary' : 'text-slate-600'}`}>{app.name}</span>
                                                                     </div>
-                                                                    <p className={`text-sm font-bold ${moduleRoles[app.id] ? 'text-blue-900' : 'text-slate-700'}`}>
-                                                                        {app.name}
-                                                                    </p>
-                                                                </div>
-
-                                                                {moduleRoles[app.id] && (
-                                                                    <div className="mt-3 ml-8 pt-2 border-t border-blue-200/50 animate-in slide-in-from-top-1 duration-200">
-                                                                        <label className="block text-[10px] font-black uppercase tracking-widest text-blue-700/60 mb-1.5">Rol en {app.name}</label>
+                                                                    
+                                                                    {moduleRoles[app.id] && (
                                                                         <select
                                                                             value={moduleRoles[app.id]}
+                                                                            onClick={(e) => e.stopPropagation()}
                                                                             onChange={(e) => handleChangeModuleRole(app.id, e.target.value)}
-                                                                            className="w-full rounded-lg border-blue-200 bg-white px-2 py-1 text-xs font-bold text-blue-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm transition-all"
+                                                                            className="rounded-md border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-800 focus:border-brand-primary focus:ring-brand-primary transition-all ml-4"
                                                                         >
                                                                             {app.roles.map(r => (
                                                                                 <option key={r.v} value={r.v}>{r.l}</option>
                                                                             ))}
                                                                         </select>
-                                                                    </div>
-                                                                )}
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            <div className="flex gap-4 mt-12 pt-8 border-t border-slate-100">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowInviteModal(false)}
-                                                    className="flex-1 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
-                                                >
-                                                    Descartar
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    disabled={isInviting}
-                                                    className="flex-[2] px-6 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:grayscale"
-                                                >
-                                                    {isInviting ? "Invitando..." : "Crear Acceso de Empleado"}
-                                                </button>
                                             </div>
                                         </form>
                                     </div>
@@ -696,7 +729,11 @@ export default function PortalDashboard() {
                                                 <p className="text-xs text-slate-500">Dentro de los límites del plan (0.5GB / 1GB).</p>
                                             </div>
                                             <div className="w-1/3 bg-slate-200 rounded-full h-2">
-                                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '50%' }}></div>
+                                                <div 
+                                                  style={{ backgroundColor: BRAND_PRIMARY }}
+                                                  className="h-2 rounded-full" 
+                                                  style={{ width: '50%', backgroundColor: BRAND_PRIMARY }}
+                                                ></div>
                                             </div>
                                         </div>
                                     </div>
@@ -714,7 +751,10 @@ export default function PortalDashboard() {
                                     <p className="text-sm text-slate-500 mb-4">Evita cargos sorpresa limitando los usos adicionales (por encima del plan base).</p>
                                     <div className="flex items-center gap-3">
                                         {/* Toggle switch visual */}
-                                        <div className="relative inline-block h-5 w-9 shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out">
+                                        <div 
+                                          style={{ backgroundColor: BRAND_PRIMARY }}
+                                          className="relative inline-block h-5 w-9 shrink-0 cursor-not-allowed rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                                        >
                                             <span className="translate-x-4 pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
                                         </div>
                                         <span className="text-sm font-medium text-slate-900">Spend cap is enabled</span>
@@ -767,7 +807,11 @@ export default function PortalDashboard() {
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
-                                                            <button onClick={handleManageBilling} className="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                                                            <button 
+                                                              onClick={handleManageBilling} 
+                                                              style={{ color: BRAND_PRIMARY }}
+                                                              className="hover:opacity-80 font-medium transition-colors"
+                                                            >
                                                                 Descargar
                                                             </button>
                                                         </td>
@@ -799,9 +843,12 @@ export default function PortalDashboard() {
                                                 <p className="text-xs text-slate-500">Expira en 12/28</p>
                                             </div>
                                         </div>
-                                        <span className="inline-flex shrink-0 items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                                            Principal activa
-                                        </span>
+                                        <span 
+                                           style={{ backgroundColor: BRAND_PRIMARY + '1a', color: BRAND_PRIMARY, borderColor: BRAND_PRIMARY + '33' }}
+                                           className="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
+                                         >
+                                             Principal activa
+                                         </span>
                                     </div>
                                 </section>
 
@@ -827,7 +874,12 @@ export default function PortalDashboard() {
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-200">
-                                        <button onClick={handleManageBilling} disabled={isBillingLoading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 transition-colors">
+                                        <button 
+                                          onClick={handleManageBilling} 
+                                          disabled={isBillingLoading} 
+                                          style={{ backgroundColor: BRAND_PRIMARY }}
+                                          className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-accent disabled:opacity-50 transition-colors"
+                                        >
                                             Actualizar datos
                                         </button>
                                     </div>
