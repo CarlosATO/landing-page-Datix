@@ -40,6 +40,15 @@ export default function PortalDashboard() {
     const [activeTab, setActiveTab] = useState('apps');
     const [userRole, setUserRole] = useState(null);
     const [team, setTeam] = useState([]);
+    const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
+    const [onboardingData, setOnboardingData] = useState({
+        rut: '',
+        activity: '',
+        address: '',
+        city: '',
+        phone: '',
+        fantasy_name: ''
+    });
 
     // Estados para Gestión de Equipo
     const [teamMembers, setTeamMembers] = useState([]);
@@ -114,23 +123,28 @@ export default function PortalDashboard() {
 
                     if (!compError && compData) {
                         setCompany(compData);
-
-                        // Cargar el rol específico del usuario en esta empresa
-                        const { data: linkData } = await supabase
-                            .from("company_users")
-                            .select("role")
-                            .single();
                         
-                        if (linkData) {
-                            setUserRole(linkData.role || 'MEMBER');
+                        // Sincronizamos onboarding data con lo que ya tenga la empresa
+                        setOnboardingData({
+                            rut: compData.rut || '',
+                            activity: compData.activity || '',
+                            address: compData.address || '',
+                            city: compData.city || '',
+                            phone: compData.phone || '',
+                            fantasy_name: compData.fantasy_name || ''
+                        });
 
-                            // Si es Owner o Manager, cargar equipo
-                            if (linkData.role === 'OWNER' || linkData.role === 'MANAGER') {
-                                const { data: teamData } = await supabase
-                                    .from('company_users')
-                                    .select('*');
-                                if (teamData) setTeamMembers(teamData);
-                            }
+                        // 🔥 NUEVA ARQUITECTURA: Extraemos Rol y Plan directamente del JWT
+                        // Ya no necesitamos hacer el select a 'company_users' para el rol
+                        const role = currentUser.app_metadata?.role || 'MEMBER';
+                        setUserRole(role);
+
+                        // Si es Owner o Manager, cargar equipo
+                        if (role === 'OWNER' || role === 'MANAGER') {
+                            const { data: teamData } = await supabase
+                                .from('company_users')
+                                .select('*');
+                            if (teamData) setTeamMembers(teamData);
                         }
                     } else {
                         console.error("No se pudo cargar la configuración de la empresa vinculada al JWT.");
@@ -152,6 +166,35 @@ export default function PortalDashboard() {
         setLoading(true);
         await supabase.auth.signOut();
         router.push('/login');
+    };
+
+    const handleSaveOnboarding = async (e) => {
+        e.preventDefault();
+        setIsSavingOnboarding(true);
+        try {
+            const { error } = await supabase
+                .from('companies')
+                .update({
+                    rut: onboardingData.rut,
+                    activity: onboardingData.activity,
+                    address: onboardingData.address,
+                    city: onboardingData.city,
+                    phone: onboardingData.phone,
+                    fantasy_name: onboardingData.fantasy_name || company.name
+                })
+                .eq('id', company.id);
+
+            if (error) throw error;
+            
+            // Recargar datos para desbloquear
+            hasFetched.current = false;
+            fetchUserData();
+        } catch (err) {
+            console.error("Error guardando onboarding:", err);
+            alert("No se pudo guardar la configuración. Revisa los datos.");
+        } finally {
+            setIsSavingOnboarding(false);
+        }
     };
 
     const handleOpenPOS = async () => {
@@ -340,45 +383,128 @@ export default function PortalDashboard() {
                         <div className="mx-auto max-w-5xl">
                             <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 text-center">
                                 
-                                {/* POS */}
-                                <div className="group flex flex-col items-center gap-3">
-                                    <button 
-                                        onClick={handleOpenPOS}
-                                        className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
-                                    >
-                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                                        <Store className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
-                                    </button>
-                                    <span className="text-sm font-medium text-white/90 group-hover:text-white">Caja POS</span>
-                                </div>
+                                {/* Onboarding Check: Si faltan datos clave, bloqueamos las Apps */}
+                                {(!company?.rut || !company?.address || !company?.activity) ? (
+                                    <div className="col-span-full animate-in fade-in zoom-in duration-500">
+                                        <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
+                                            <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-8 border-b border-white/5">
+                                                <div className="flex items-center gap-4 mb-2">
+                                                    <div className="p-3 bg-white/10 rounded-2xl">
+                                                        <Briefcase className="h-8 w-8 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <h2 className="text-2xl font-bold text-white">¡Bienvenido a Datix!</h2>
+                                                        <p className="text-white/60 text-sm">Completa el perfil de tu empresa para habilitar los módulos.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                {/* Adquisiciones */}
-                                <div className="group flex flex-col items-center gap-3">
-                                    <button 
-                                        onClick={handleOpenAdquisiciones}
-                                        className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
-                                    >
-                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                                        <FileText className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
-                                    </button>
-                                    <span className="text-sm font-medium text-white/90 group-hover:text-white">Adquisiciones</span>
-                                </div>
+                                            <form onSubmit={handleSaveOnboarding} className="p-8 space-y-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold uppercase tracking-widest text-white/40">RUT Empresa *</label>
+                                                        <input 
+                                                            required
+                                                            placeholder="76.xxx.xxx-x"
+                                                            value={onboardingData.rut}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, rut: e.target.value})}
+                                                            className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold uppercase tracking-widest text-white/40">Giro / Actividad *</label>
+                                                        <input 
+                                                            required
+                                                            placeholder="Ej: Retail, Ferretería..."
+                                                            value={onboardingData.activity}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, activity: e.target.value})}
+                                                            className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <label className="text-xs font-bold uppercase tracking-widest text-white/40">Dirección Comercial *</label>
+                                                        <input 
+                                                            required
+                                                            placeholder="Calle, Número, Ciudad"
+                                                            value={onboardingData.address}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, address: e.target.value})}
+                                                            className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold uppercase tracking-widest text-white/40">Teléfono</label>
+                                                        <input 
+                                                            placeholder="+56 9 ..."
+                                                            value={onboardingData.phone}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, phone: e.target.value})}
+                                                            className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold uppercase tracking-widest text-white/40">Ciudad</label>
+                                                        <input 
+                                                            placeholder="Santiago, Concepción..."
+                                                            value={onboardingData.city}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, city: e.target.value})}
+                                                            className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
 
-                                {/* Logística */}
-                                <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
-                                    <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
-                                        <Package className="h-10 w-10 text-white/40" />
+                                                <button 
+                                                    type="submit"
+                                                    disabled={isSavingOnboarding}
+                                                    style={{ backgroundColor: BRAND_PRIMARY }}
+                                                    className="w-full mt-4 rounded-2xl px-6 py-4 text-white font-bold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+                                                >
+                                                    {isSavingOnboarding ? "Guardando..." : "Finalizar Configuración e Ingresar"}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                    <span className="text-xs font-medium text-white/50">Logística (Prox)</span>
-                                </div>
+                                ) : (
+                                    <>
+                                        {/* POS */}
+                                        <div className="group flex flex-col items-center gap-3">
+                                            <button 
+                                                onClick={handleOpenPOS}
+                                                className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
+                                            >
+                                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
+                                                <Store className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
+                                            </button>
+                                            <span className="text-sm font-medium text-white/90 group-hover:text-white">Caja POS</span>
+                                        </div>
 
-                                {/* RRHH */}
-                                <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
-                                    <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
-                                        <Users className="h-10 w-10 text-white/40" />
-                                    </div>
-                                    <span className="text-xs font-medium text-white/50">RRHH (Prox)</span>
-                                </div>
+                                        {/* Adquisiciones */}
+                                        <div className="group flex flex-col items-center gap-3">
+                                            <button 
+                                                onClick={handleOpenAdquisiciones}
+                                                className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
+                                            >
+                                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
+                                                <FileText className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
+                                            </button>
+                                            <span className="text-sm font-medium text-white/90 group-hover:text-white">Adquisiciones</span>
+                                        </div>
+
+                                        {/* Logística */}
+                                        <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
+                                            <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
+                                                <Package className="h-10 w-10 text-white/40" />
+                                            </div>
+                                            <span className="text-xs font-medium text-white/50">Logística (Prox)</span>
+                                        </div>
+
+                                        {/* RRHH */}
+                                        <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
+                                            <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
+                                                <Users className="h-10 w-10 text-white/40" />
+                                            </div>
+                                            <span className="text-xs font-medium text-white/50">RRHH (Prox)</span>
+                                        </div>
+                                    </>
+                                )}
 
                                 {/* Separador visual para próximos lanzamientos si es necesario */}
                             </div>
