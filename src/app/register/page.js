@@ -93,6 +93,10 @@ export default function RegisterPage() {
 
             if (linkError) throw new Error(linkError.message);
 
+            // Paso 3.5: Refrescar la sesión para obtener el company_id en el JWT
+            // El trigger en la BD ya inyectó el ID en app_metadata
+            await supabase.auth.refreshSession();
+
             // Paso 4: Redirección
             router.push("/portal");
 

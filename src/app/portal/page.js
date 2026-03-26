@@ -56,9 +56,32 @@ export default function PortalDashboard() {
     const hasFetched = useRef(false);
 
     // Cargar Usuario y Empresa
+    const hasProcessedHash = useRef(false);
+
     useEffect(() => {
         const fetchUserData = async () => {
             if (hasFetched.current) return;
+            
+            // 🔥 NUEVA ARQUITECTURA: Soporte SSO vía Hash en el Portal (Evita parpadeo de Login)
+            if (!hasProcessedHash.current && typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+                hasProcessedHash.current = true;
+                try {
+                    const hash = window.location.hash.substring(1);
+                    const params = new URLSearchParams(hash);
+                    const access_token = params.get('access_token');
+                    const refresh_token = params.get('refresh_token');
+
+                    if (access_token && refresh_token) {
+                        window.history.replaceState(null, '', window.location.pathname);
+                        const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+                        if (sessionError) throw sessionError;
+                        // No refrescamos manualmente aquí para evitar 429 (Rate Limit)
+                    }
+                } catch (err) {
+                    console.error("Error sincronizando sesión en Portal:", err);
+                }
+            }
+
             hasFetched.current = true;
             
             setLoading(true);
@@ -66,6 +89,12 @@ export default function PortalDashboard() {
                 const { data: { user: currentUser }, error: sessionError } = await supabase.auth.getUser();
 
                 if (sessionError || !currentUser) {
+                    // Si el error es 429 (Rate Limit), no sacamos al usuario, esperamos reintento
+                    if (sessionError?.status === 429) {
+                        console.warn("Rate limit en Auth, reintentando en 2 segundos...");
+                        setTimeout(fetchUserData, 2000);
+                        return;
+                    }
                     console.error("No hay sesión activa.", sessionError);
                     router.push('/login');
                     return;
@@ -73,33 +102,41 @@ export default function PortalDashboard() {
 
                 setUser(currentUser);
 
-                // Buscar a qué empresa pertenece
-                const { data: linkData, error: linkError } = await supabase
-                    .from("company_users")
-                    .select("company_id, role")
-                    .eq("user_id", currentUser.id)
-                    .single();
+                // 🔥 NUEVA ARQUITECTURA: Extraemos el company_id directamente del JWT (app_metadata)
+                const jwtCompanyId = currentUser.app_metadata?.company_id;
 
-                if (!linkError && linkData) {
-                    setUserRole(linkData.role || 'Cajero');
-                    const { data: compData } = await supabase
+                if (jwtCompanyId) {
+                    // Cargar detalles de la empresa (RLS nos permitirá verla si el ID coincide)
+                    const { data: compData, error: compError } = await supabase
                         .from("companies")
                         .select("*")
-                        .eq("id", linkData.company_id)
                         .single();
 
-                    if (compData) {
+                    if (!compError && compData) {
                         setCompany(compData);
 
-                        // Si es Owner o Manager, cargar equipo
-                        if (linkData.role === 'OWNER' || linkData.role === 'MANAGER') {
-                            const { data: teamData } = await supabase
-                                .from('company_users')
-                                .select('*')
-                                .eq('company_id', linkData.company_id);
-                            if (teamData) setTeamMembers(teamData);
+                        // Cargar el rol específico del usuario en esta empresa
+                        const { data: linkData } = await supabase
+                            .from("company_users")
+                            .select("role")
+                            .single();
+                        
+                        if (linkData) {
+                            setUserRole(linkData.role || 'MEMBER');
+
+                            // Si es Owner o Manager, cargar equipo
+                            if (linkData.role === 'OWNER' || linkData.role === 'MANAGER') {
+                                const { data: teamData } = await supabase
+                                    .from('company_users')
+                                    .select('*');
+                                if (teamData) setTeamMembers(teamData);
+                            }
                         }
+                    } else {
+                        console.error("No se pudo cargar la configuración de la empresa vinculada al JWT.");
                     }
+                } else {
+                    console.warn("El token del usuario no tiene un company_id asignado.");
                 }
             } catch (err) {
                 console.error("Error al cargar datos:", err);
@@ -183,8 +220,7 @@ export default function PortalDashboard() {
             // Recargar lista si el componente tiene acceso a la función de carga
             const { data: teamData } = await supabase
                 .from('company_users')
-                .select('*')
-                .eq('company_id', company.id);
+                .select('*');
             if (teamData) setTeamMembers(teamData);
 
             alert("Usuario invitado con éxito!");

@@ -18,6 +18,44 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [isProcessingHash, setIsProcessingHash] = useState(false);
+    const hasProcessedHash = React.useRef(false);
+
+    // 🔥 NUEVA ARQUITECTURA: Procesamiento de Hash para SSO desde los módulos
+    React.useEffect(() => {
+        const processHash = async () => {
+            if (hasProcessedHash.current) return;
+            if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+                hasProcessedHash.current = true;
+                setIsProcessingHash(true);
+                try {
+                    const hash = window.location.hash.substring(1);
+                    const params = new URLSearchParams(hash);
+                    const access_token = params.get('access_token');
+                    const refresh_token = params.get('refresh_token');
+
+                    if (access_token && refresh_token) {
+                        // Limpiamos el hash para que no se vea feo
+                        window.history.replaceState(null, '', window.location.pathname);
+                        
+                        const { error: sessionError } = await supabase.auth.setSession({
+                            access_token,
+                            refresh_token
+                        });
+
+                        if (sessionError) throw sessionError;
+                        
+                        // No refrescamos manualmente aquí para evitar 429 (Rate Limit)
+                        router.push('/portal');
+                    }
+                } catch (err) {
+                    console.error("Error sincronizando sesión desde hash:", err);
+                    setIsProcessingHash(false);
+                }
+            }
+        };
+        processHash();
+    }, [router]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -39,7 +77,8 @@ export default function LoginPage() {
                 throw new Error(errorMessage);
             }
 
-            // Si es exitoso
+            // Si es exitoso, refrescamos la sesión para obtener el company_id inyectado por el Trigger
+            await supabase.auth.refreshSession();
             router.push('/portal');
 
         } catch (err) {
@@ -49,6 +88,17 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (loading || isProcessingHash) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-white p-8">
+                <div className="text-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-slate-500 font-medium">Sincronizando tu sesión...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen font-sans text-slate-900 selection:bg-blue-200">
