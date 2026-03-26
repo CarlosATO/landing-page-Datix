@@ -29,14 +29,14 @@ export async function middleware(request) {
         }
     )
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
     const pathname = request.nextUrl.pathname
 
     // Protege la ruta /portal y subrutas
     if (pathname.startsWith('/portal')) {
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
         if (!user) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
@@ -44,6 +44,10 @@ export async function middleware(request) {
 
     // Redirige al portal si está autenticado e intenta ir a login o register
     if (pathname === '/login' || pathname === '/register') {
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+        
         if (user) {
             return NextResponse.redirect(new URL('/portal', request.url))
         }
