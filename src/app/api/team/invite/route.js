@@ -30,6 +30,7 @@ export async function POST(request) {
             .insert([{
                 company_id: companyId,
                 user_id: authData.user.id,
+                email: email,
                 role: globalRole || 'MEMBER',
                 full_name: fullName,
                 module_roles: moduleRoles || {}

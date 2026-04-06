@@ -13,7 +13,9 @@ import {
     Users,
     ExternalLink,
     FileText,
-    Check
+    Check,
+    Briefcase,
+    Lock
 } from "lucide-react";
 
 const BRAND_PRIMARY = '#4C3073';
@@ -54,6 +56,7 @@ export default function PortalDashboard() {
     const [teamMembers, setTeamMembers] = useState([]);
     const [teamViewMode, setTeamViewMode] = useState('list'); // 'list' | 'form'
     const [isInviting, setIsInviting] = useState(false);
+    const [editingUserId, setEditingUserId] = useState(null);
 
     // Formulario de Invitación
     const [inviteEmail, setInviteEmail] = useState('');
@@ -61,6 +64,15 @@ export default function PortalDashboard() {
     const [invitePassword, setInvitePassword] = useState('');
     const [inviteRole, setInviteRole] = useState('MEMBER');
     const [moduleRoles, setModuleRoles] = useState({});
+
+    // Estado para forzar cambio de password al inicio
+    const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+    // Estado para saber a qué módulos tiene acceso el usuario base
+    const [userAppAccess, setUserAppAccess] = useState({});
 
     const hasFetched = useRef(false);
 
@@ -139,12 +151,41 @@ export default function PortalDashboard() {
                         const role = currentUser.app_metadata?.role || 'MEMBER';
                         setUserRole(role);
 
+                        // Cargar settings del usuario como módulo_roles y must_change_password
+                        const { data: myUserRel } = await supabase
+                            .from('company_users')
+                            .select('id, module_roles, must_change_password, full_name, email')
+                            .eq('user_id', currentUser.id)
+                            .eq('company_id', jwtCompanyId)
+                            .single();
+                        
+                        // AUTO-HEALING: El trigger de DB original no graba nombre ni correo para el Dueño.
+                        // Reparamos este registro en tiempo real de forma silenciosa la primera vez.
+                        if (role === 'OWNER' && myUserRel && (!myUserRel.full_name || !myUserRel.email)) {
+                            const nameFromAuth = currentUser.user_metadata?.full_name || 'Dueño Registrado';
+                            const emailFromAuth = currentUser.email;
+                            await supabase
+                                .from('company_users')
+                                .update({ full_name: nameFromAuth, email: emailFromAuth })
+                                .eq('id', myUserRel.id);
+                        }
+                        
+                        // Los dueños NUNCA deben cambiar obligatoriamente su contraseña por esta vía.
+                        if (role !== 'OWNER' && myUserRel?.must_change_password) {
+                            setNeedsPasswordChange(true);
+                        }
+
                         // Si es Owner o Manager, cargar equipo
                         if (role === 'OWNER' || role === 'MANAGER') {
                             const { data: teamData } = await supabase
                                 .from('company_users')
                                 .select('*');
                             if (teamData) setTeamMembers(teamData);
+                        } else {
+                            // Si es empleado base (MEMBER), cargar sus permisos de módulos
+                            if (myUserRel?.module_roles) {
+                                setUserAppAccess(myUserRel.module_roles);
+                            }
                         }
                     } else {
                         console.error("No se pudo cargar la configuración de la empresa vinculada al JWT.");
@@ -168,6 +209,43 @@ export default function PortalDashboard() {
         router.push('/login');
     };
 
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            alert("Las contraseñas no coinciden");
+            return;
+        }
+        if (newPassword.length < 6) {
+            alert("La contraseña debe tener al menos 6 caracteres");
+            return;
+        }
+
+        setIsChangingPassword(true);
+        try {
+            // Actualizar contraseña en el sistema Auth
+            const { error: authError } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+            if (authError) throw authError;
+
+            // Actualizar bandera relacional
+            const { error: dbError } = await supabase
+                .from('company_users')
+                .update({ must_change_password: false })
+                .eq('user_id', user.id)
+                .eq('company_id', company.id);
+            if (dbError) throw dbError;
+
+            alert("Contraseña actualizada con éxito.");
+            setNeedsPasswordChange(false);
+        } catch (error) {
+            console.error("Error al cambiar contraseña:", error);
+            alert("Error: " + error.message);
+        } finally {
+            setIsChangingPassword(false);
+        }
+    };
+
     const handleSaveOnboarding = async (e) => {
         e.preventDefault();
         setIsSavingOnboarding(true);
@@ -186,9 +264,16 @@ export default function PortalDashboard() {
 
             if (error) throw error;
             
-            // Recargar datos para desbloquear
-            hasFetched.current = false;
-            fetchUserData();
+            // Actualizamos la empresa en el estado local para desbloquear instantáneamente la UI
+            setCompany(prev => ({
+                ...prev,
+                rut: onboardingData.rut,
+                activity: onboardingData.activity,
+                address: onboardingData.address,
+                city: onboardingData.city,
+                phone: onboardingData.phone,
+                fantasy_name: onboardingData.fantasy_name || prev.name
+            }));
         } catch (err) {
             console.error("Error guardando onboarding:", err);
             alert("No se pudo guardar la configuración. Revisa los datos.");
@@ -200,7 +285,7 @@ export default function PortalDashboard() {
     const handleOpenPOS = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-            const url = `http://localhost:5173/#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            const url = `http://localhost:5173/pos#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
             window.location.href = url;
         } else {
             window.location.href = '/login';
@@ -210,7 +295,8 @@ export default function PortalDashboard() {
     const handleOpenAdquisiciones = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-            const url = `http://localhost:5174/#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            // El dashboard principal de Adquisiciones suele ser la raíz, pero por seguridad apuntamos a una ruta dentro del layout.
+            const url = `http://localhost:5174/dashboard#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
             window.location.href = url;
         } else {
             window.location.href = '/login';
@@ -236,38 +322,64 @@ export default function PortalDashboard() {
         }));
     };
 
+    const handleEditUser = (member) => {
+        setEditingUserId(member.user_id);
+        setInviteEmail(member.email || ''); 
+        setInviteName(member.full_name || '');
+        setInvitePassword(''); 
+        setInviteRole(member.role || 'MEMBER');
+        setModuleRoles(member.module_roles || {});
+        setTeamViewMode('form');
+    };
+
     const handleInviteUser = async (e) => {
         e.preventDefault();
+        setIsInviting(true);
         try {
-            const payload = {
-                email: inviteEmail,
-                password: invitePassword,
-                fullName: inviteName,
-                globalRole: inviteRole,
-                companyId: company.id,
-                moduleRoles: moduleRoles
-            };
+            if (editingUserId) {
+                // MODO EDICIÓN: Actualizar company_users
+                const { error: updateError } = await supabase
+                    .from('company_users')
+                    .update({
+                        full_name: inviteName,
+                        role: inviteRole,
+                        module_roles: moduleRoles
+                    })
+                    .eq('user_id', editingUserId)
+                    .eq('company_id', company.id);
+                
+                if (updateError) throw new Error(updateError.message);
+                alert("Usuario actualizado con éxito!");
+            } else {
+                // MODO CREACIÓN: Llamar API de Invitación Admin
+                const payload = {
+                    email: inviteEmail,
+                    password: invitePassword,
+                    fullName: inviteName,
+                    globalRole: inviteRole,
+                    companyId: company.id,
+                    moduleRoles: moduleRoles
+                };
 
-            console.log("Enviando payload:", payload);
+                const res = await fetch('/api/team/invite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
 
-            const res = await fetch('/api/team/invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
+                alert("Usuario invitado con éxito!");
+            }
 
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
-
-            // Recargar lista si el componente tiene acceso a la función de carga
+            // Recargar lista
             const { data: teamData } = await supabase
                 .from('company_users')
                 .select('*');
             if (teamData) setTeamMembers(teamData);
 
-            alert("Usuario invitado con éxito!");
             setTeamViewMode('list');
+            setEditingUserId(null);
             setInviteEmail('');
             setInviteName('');
             setInvitePassword('');
@@ -310,11 +422,67 @@ export default function PortalDashboard() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-50">
-                <div 
-                  style={{ borderTopColor: BRAND_PRIMARY }}
-                  className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200"
-                ></div>
+            <div className="flex min-h-screen items-center justify-center bg-white p-8">
+                <div className="text-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#4C3073] border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-slate-500 font-medium">Buscando permisos en tu ecosistema...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (needsPasswordChange) {
+        return (
+            <div className="flex flex-col h-screen items-center justify-center font-sans tracking-tight" style={{ backgroundColor: '#45316D' }}>
+                <div className="w-full max-w-md p-10 bg-white rounded-[2rem] shadow-2xl mx-4 animate-in fade-in duration-500">
+                    <div className="flex justify-center mb-6">
+                        <div className="p-4 bg-purple-50 rounded-2xl shadow-inner border border-purple-100">
+                            <Lock className="h-8 w-8 text-[#5B4385]" />
+                        </div>
+                    </div>
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-black text-slate-900 mb-2">Paso de Seguridad</h2>
+                        <p className="text-slate-500 text-sm">
+                            Tu empleador te ha invitado al sistema con una contraseña temporal. Por seguridad de tus accesos, debes crear tu propia contraseña permanentemente.
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleChangePassword} className="space-y-4">
+                        <div className="space-y-1 text-left">
+                            <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Nueva Contraseña</label>
+                            <input 
+                                type="password"
+                                required
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 px-5 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-medium placeholder:text-slate-300"
+                                placeholder="Mínimo 6 caracteres"
+                            />
+                        </div>
+                        <div className="space-y-1 text-left">
+                            <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Confirmar Nueva Contraseña</label>
+                            <input 
+                                type="password"
+                                required
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 px-5 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-medium placeholder:text-slate-300"
+                                placeholder="Repite tu contraseña..."
+                            />
+                        </div>
+
+                        <div className="pt-4">
+                            <button 
+                                type="submit"
+                                disabled={isChangingPassword}
+                                style={{ backgroundColor: BRAND_PRIMARY }}
+                                className="w-full rounded-2xl px-6 py-4 text-white font-bold shadow-xl shadow-purple-900/40 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+                            >
+                                {isChangingPassword ? "Actualizando Seguridad..." : "Guardar y Entrar al Portal"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         );
     }
@@ -332,33 +500,39 @@ export default function PortalDashboard() {
                     <button className="p-1 hover:bg-white/10 rounded-md transition-colors">
                         <LayoutDashboard className="h-6 w-6" />
                     </button>
-                    <span className="text-sm font-bold tracking-widest uppercase">
-                        Portal Datix
-                    </span>
+                    <img
+                        src="/imagen/logo_datix.png"
+                        alt="Datix Logo"
+                        className="h-8 w-auto brightness-0 invert opacity-90 transition-all hover:opacity-100"
+                    />
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button 
-                        onClick={() => setActiveTab('team')}
-                        title="Gestión de Equipo"
-                        className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'team' ? 'bg-white/20' : ''}`}
-                    >
-                        <Users className="h-5 w-5" />
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('billing')}
-                        title="Facturación"
-                        className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'billing' ? 'bg-white/20' : ''}`}
-                    >
-                        <CreditCard className="h-5 w-5" />
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('settings')}
-                        title="Configuración"
-                        className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'settings' ? 'bg-white/20' : ''}`}
-                    >
-                        <Settings className="h-5 w-5" />
-                    </button>
+                    {(userRole === 'OWNER' || userRole === 'MANAGER') && (
+                        <>
+                            <button 
+                                onClick={() => setActiveTab('team')}
+                                title="Gestión de Equipo"
+                                className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'team' ? 'bg-white/20' : ''}`}
+                            >
+                                <Users className="h-5 w-5" />
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('billing')}
+                                title="Facturación"
+                                className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'billing' ? 'bg-white/20' : ''}`}
+                            >
+                                <CreditCard className="h-5 w-5" />
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('settings')}
+                                title="Configuración"
+                                className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'settings' ? 'bg-white/20' : ''}`}
+                            >
+                                <Settings className="h-5 w-5" />
+                            </button>
+                        </>
+                    )}
                     
                     <div className="h-6 w-px bg-white/20 mx-2"></div>
 
@@ -465,44 +639,53 @@ export default function PortalDashboard() {
                                 ) : (
                                     <>
                                         {/* POS */}
-                                        <div className="group flex flex-col items-center gap-3">
-                                            <button 
-                                                onClick={handleOpenPOS}
-                                                className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
-                                            >
-                                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                                                <Store className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
-                                            </button>
-                                            <span className="text-sm font-medium text-white/90 group-hover:text-white">Caja POS</span>
-                                        </div>
+                                        {(userRole === 'OWNER' || userRole === 'MANAGER' || userAppAccess['POS']) && (
+                                            <div className="group flex flex-col items-center gap-3">
+                                                <button 
+                                                    onClick={handleOpenPOS}
+                                                    className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
+                                                >
+                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
+                                                    <Store className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
+                                                </button>
+                                                <span className="text-sm font-medium text-white/90 group-hover:text-white">Caja POS</span>
+                                            </div>
+                                        )}
 
                                         {/* Adquisiciones */}
-                                        <div className="group flex flex-col items-center gap-3">
-                                            <button 
-                                                onClick={handleOpenAdquisiciones}
-                                                className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
-                                            >
-                                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                                                <FileText className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
-                                            </button>
-                                            <span className="text-sm font-medium text-white/90 group-hover:text-white">Adquisiciones</span>
-                                        </div>
-
-                                        {/* Logística */}
-                                        <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
-                                            <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
-                                                <Package className="h-10 w-10 text-white/40" />
+                                        {(userRole === 'OWNER' || userRole === 'MANAGER' || userAppAccess['ADQUISICIONES']) && (
+                                            <div className="group flex flex-col items-center gap-3">
+                                                <button 
+                                                    onClick={handleOpenAdquisiciones}
+                                                    className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
+                                                >
+                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
+                                                    <FileText className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
+                                                </button>
+                                                <span className="text-sm font-medium text-white/90 group-hover:text-white">Adquisiciones</span>
                                             </div>
-                                            <span className="text-xs font-medium text-white/50">Logística (Prox)</span>
-                                        </div>
+                                        )}
 
-                                        {/* RRHH */}
-                                        <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
-                                            <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
-                                                <Users className="h-10 w-10 text-white/40" />
-                                            </div>
-                                            <span className="text-xs font-medium text-white/50">RRHH (Prox)</span>
-                                        </div>
+                                        {/* Sólo visibles para Dueños o Managers */}
+                                        {(userRole === 'OWNER' || userRole === 'MANAGER') && (
+                                            <>
+                                                {/* Logística */}
+                                                <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
+                                                    <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
+                                                        <Package className="h-10 w-10 text-white/40" />
+                                                    </div>
+                                                    <span className="text-xs font-medium text-white/50">Logística (Prox)</span>
+                                                </div>
+
+                                                {/* RRHH */}
+                                                <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
+                                                    <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
+                                                        <Users className="h-10 w-10 text-white/40" />
+                                                    </div>
+                                                    <span className="text-xs font-medium text-white/50">RRHH (Prox)</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </>
                                 )}
 
@@ -533,7 +716,10 @@ export default function PortalDashboard() {
                     <div>
                         <nav className="flex items-center gap-2 text-sm text-white/50 mb-1">
                             <button 
-                                onClick={() => setTeamViewMode('list')}
+                                onClick={() => {
+                                    setEditingUserId(null);
+                                    setTeamViewMode('list');
+                                }}
                                 className={`hover:text-white transition-colors ${teamViewMode === 'list' ? 'font-bold text-white' : ''}`}
                             >
                                 Mi Equipo
@@ -541,12 +727,12 @@ export default function PortalDashboard() {
                             {teamViewMode === 'form' && (
                                 <>
                                     <span>/</span>
-                                    <span className="font-bold text-white">Nuevo</span>
+                                    <span className="font-bold text-white">{editingUserId ? 'Editar' : 'Nuevo'}</span>
                                 </>
                             )}
                         </nav>
                         <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                            {teamViewMode === 'list' ? 'Mi Equipo' : 'Nuevo Colaborador'}
+                            {teamViewMode === 'list' ? 'Mi Equipo' : (editingUserId ? 'Editar Colaborador' : 'Nuevo Colaborador')}
                         </h1>
                     </div>
                     
@@ -554,7 +740,15 @@ export default function PortalDashboard() {
                         {teamViewMode === 'list' ? (
                             <>
                                 <button
-                                    onClick={() => setTeamViewMode('form')}
+                                    onClick={() => {
+                                        setEditingUserId(null);
+                                        setInviteEmail('');
+                                        setInviteName('');
+                                        setInvitePassword('');
+                                        setInviteRole('MEMBER');
+                                        setModuleRoles({});
+                                        setTeamViewMode('form');
+                                    }}
                                     style={{ backgroundColor: BRAND_PRIMARY }}
                                     className="inline-flex items-center justify-center gap-2 rounded-lg text-white shadow-sm hover:bg-brand-accent transition-colors px-4 py-2 text-sm font-semibold"
                                 >
@@ -626,6 +820,7 @@ export default function PortalDashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <button 
+                                                onClick={() => handleEditUser(member)}
                                                 className="text-white/50 hover:text-white font-medium transition-colors focus:outline-none"
                                             >
                                                 Editar
@@ -658,11 +853,24 @@ export default function PortalDashboard() {
                                         <label className="text-sm font-medium text-white/50 text-right">Email</label>
                                         <input
                                             type="email"
-                                            required
+                                            required={!editingUserId}
+                                            disabled={!!editingUserId}
                                             value={inviteEmail}
                                             onChange={(e) => setInviteEmail(e.target.value)}
-                                            className="col-span-2 rounded-md border-white/10 bg-white/5 py-1.5 text-sm text-white focus:ring-2 focus:ring-white/20 transition-all placeholder:text-white/20"
-                                            placeholder="juan@datix.cl"
+                                            className="col-span-2 rounded-md border-white/10 bg-white/5 py-1.5 text-sm text-white focus:ring-2 focus:ring-white/20 transition-all placeholder:text-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            placeholder={editingUserId ? "Correo no especificado o reservado" : "juan@datix.cl"}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-3 items-center gap-4">
+                                        <label className="text-sm font-medium text-white/50 text-right">Contraseña Inicial</label>
+                                        <input
+                                            type="text"
+                                            required={!editingUserId}
+                                            disabled={!!editingUserId}
+                                            value={invitePassword}
+                                            onChange={(e) => setInvitePassword(e.target.value)}
+                                            className="col-span-2 rounded-md border-white/10 bg-white/5 py-1.5 text-sm text-white focus:ring-2 focus:ring-white/20 transition-all placeholder:text-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            placeholder={editingUserId ? "No modificable desde aquí" : "Ej: Temporal123!"}
                                         />
                                     </div>
                                     <div className="grid grid-cols-3 items-center gap-4">

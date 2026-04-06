@@ -109,8 +109,8 @@ export default function LoginPage() {
 
                     {/* Header en Móvil */}
                     <div className="mb-8 text-center lg:hidden">
-                        <Link href="/" className="text-3xl font-black tracking-tighter text-blue-700">
-                            Datix
+                        <Link href="/">
+                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto dark:brightness-0 dark:invert" />
                         </Link>
                     </div>
 
@@ -212,8 +212,8 @@ export default function LoginPage() {
 
                 {/* Contenido Centro */}
                 <div className="relative z-10 flex flex-col items-center justify-center text-center">
-                    <Link href="/" className="mb-8 text-5xl font-black tracking-tighter text-white">
-                        Datix
+                    <Link href="/">
+                        <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-32 w-auto brightness-0 invert" />
                     </Link>
                     <h2 className="text-3xl font-bold leading-tight text-white xl:text-4xl">
                         Bienvenido de vuelta a tu Ecosistema.

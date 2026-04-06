@@ -36,6 +36,7 @@ export default function RegisterPage() {
     // Estados de UI
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [success, setSuccess] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -58,7 +59,9 @@ export default function RegisterPage() {
                 password: formData.password,
                 options: {
                     data: {
-                        full_name: formData.nombre
+                        full_name: formData.nombre,
+                        empresa_nombre: formData.empresa,
+                        modulo_inicial: formData.moduloInicial
                     }
                 }
             });
@@ -66,39 +69,12 @@ export default function RegisterPage() {
             if (authError) throw new Error(authError.message);
             if (!authData.user) throw new Error("Error desconocido al crear usuario");
 
-            // Paso 2: Crear Empresa en tabla "companies"
-            // Calcula la fecha de expiración sumando 14 días
-            const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-
-            const { data: companyData, error: companyError } = await supabase
-                .from("companies")
-                .insert({
-                    name: formData.empresa,
-                    plan_type: "TRIAL",
-                    trial_ends_at: trialEnd
-                })
-                .select()
-                .single();
-
-            if (companyError) throw new Error(companyError.message);
-
-            // Paso 3: Vincular en tabla "company_users" con rol 'OWNER'
-            const { error: linkError } = await supabase
-                .from("company_users")
-                .insert({
-                    company_id: companyData.id,
-                    user_id: authData.user.id,
-                    role: "OWNER"
-                });
-
-            if (linkError) throw new Error(linkError.message);
-
-            // Paso 3.5: Refrescar la sesión para obtener el company_id en el JWT
-            // El trigger en la BD ya inyectó el ID en app_metadata
-            await supabase.auth.refreshSession();
-
-            // Paso 4: Redirección
-            router.push("/portal");
+            // Si se requiere confirmación de correo electrónico, la sesión será null.
+            if (!authData.session) {
+                setSuccess(true);
+            } else {
+                router.push("/portal");
+            }
 
         } catch (err) {
             console.error("Error en el registro:", err);
@@ -127,8 +103,8 @@ export default function RegisterPage() {
 
                 {/* Logo */}
                 <div className="relative z-10">
-                    <Link href="/" className="text-4xl font-black tracking-tighter text-white">
-                        Datix
+                    <Link href="/">
+                        <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-32 w-auto brightness-0 invert" />
                     </Link>
                 </div>
 
@@ -165,8 +141,8 @@ export default function RegisterPage() {
 
                     {/* Header en Móvil */}
                     <div className="mb-8 text-center lg:hidden">
-                        <Link href="/" className="text-3xl font-black tracking-tighter text-blue-700">
-                            Datix
+                        <Link href="/">
+                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto dark:brightness-0 dark:invert" />
                         </Link>
                     </div>
 
@@ -180,166 +156,179 @@ export default function RegisterPage() {
                         </p>
                     </div>
 
-                    {/* Formulario */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
-
-                        <div className="space-y-4">
-                            {/* Input Empresa */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Nombre de tu Empresa / Local</label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                        <Building2 className="h-5 w-5" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        name="empresa"
-                                        value={formData.empresa}
-                                        onChange={handleChange}
-                                        required
-                                        className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        placeholder="Ej: Minimarket Los Andes"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Input Nombre */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Tu Nombre y Apellido</label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                        <User className="h-5 w-5" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        value={formData.nombre}
-                                        onChange={handleChange}
-                                        required
-                                        className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        placeholder="Ej: Juan Pérez"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Input Email */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Correo Electrónico</label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                        <Mail className="h-5 w-5" />
-                                    </div>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        required
-                                        className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        placeholder="tu@email.com"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Input Contraseña */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Contraseña</label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                        <Lock className="h-5 w-5" />
-                                    </div>
-                                    <input
-                                        type="password"
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        required
-                                        className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Selector de Módulo Inicial */}
-                        <div className="mt-8">
-                            <label className="mb-3 block text-sm font-medium text-slate-700">
-                                ¿Qué módulo te interesa probar primero?
-                            </label>
-                            <div className="grid grid-cols-3 gap-3">
-
-                                {/* Opción POS */}
-                                <button
-                                    type="button"
-                                    onClick={() => handleModuleSelect('pos')}
-                                    className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'pos'
-                                        ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    <Store className={`h-6 w-6 ${formData.moduloInicial === 'pos' ? 'text-blue-600' : 'text-slate-400'}`} />
-                                    Punto de Venta
-                                </button>
-
-                                {/* Opción Logística */}
-                                <button
-                                    type="button"
-                                    onClick={() => handleModuleSelect('logistica')}
-                                    className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'logistica'
-                                        ? 'border-purple-600 bg-purple-50 text-purple-700 ring-1 ring-purple-600'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    <Truck className={`h-6 w-6 ${formData.moduloInicial === 'logistica' ? 'text-purple-600' : 'text-slate-400'}`} />
-                                    Logística
-                                </button>
-
-                                {/* Opción RRHH */}
-                                <button
-                                    type="button"
-                                    onClick={() => handleModuleSelect('rrhh')}
-                                    className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'rrhh'
-                                        ? 'border-orange-600 bg-orange-50 text-orange-700 ring-1 ring-orange-600'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    <Users className={`h-6 w-6 ${formData.moduloInicial === 'rrhh' ? 'text-orange-600' : 'text-slate-400'}`} />
-                                    RRHH
-                                </button>
-
-                            </div>
-                        </div>
-
-                        {/* Error estético */}
-                        {error && (
-                            <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20">
-                                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                                <p>{error}</p>
-                            </div>
-                        )}
-
-                        {/* Botón Submit */}
-                        <div className="pt-4">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full rounded-xl bg-blue-600 px-4 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-500 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                                {loading ? "Creando ecosistema..." : "Crear mi cuenta"}
-                            </button>
-                        </div>
-
-                        {/* Enlace Login */}
-                        <div className="text-center">
-                            <p className="text-sm text-slate-600">
-                                ¿Ya tienes cuenta?{" "}
-                                <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-500">
-                                    Inicia sesión aquí
-                                </Link>
+                    {/* Formulario / Mensaje de Éxito */}
+                    {success ? (
+                        <div className="flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-10 text-center shadow-lg">
+                            <CheckCircle2 className="h-16 w-16 text-green-500" />
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">¡Registro casi listo!</h2>
+                            <p className="text-slate-600">
+                                ¡Revisa tu bandeja de entrada! Te hemos enviado un enlace para confirmar tu correo y activar tu cuenta.
                             </p>
+                            <Link href="/login" className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-slate-800 hover:shadow-lg active:scale-[0.98]">
+                                Ir a Iniciar Sesión
+                            </Link>
                         </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-6">
 
-                    </form>
+                            <div className="space-y-4">
+                                {/* Input Empresa */}
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Nombre de tu Empresa / Local</label>
+                                    <div className="relative">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                            <Building2 className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            name="empresa"
+                                            value={formData.empresa}
+                                            onChange={handleChange}
+                                            required
+                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="Ej: Minimarket Los Andes"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Input Nombre */}
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Tu Nombre y Apellido</label>
+                                    <div className="relative">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                            <User className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            name="nombre"
+                                            value={formData.nombre}
+                                            onChange={handleChange}
+                                            required
+                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="Ej: Juan Pérez"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Input Email */}
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Correo Electrónico</label>
+                                    <div className="relative">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                            <Mail className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            required
+                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="tu@email.com"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Input Contraseña */}
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Contraseña</label>
+                                    <div className="relative">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                            <Lock className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type="password"
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            required
+                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Selector de Módulo Inicial */}
+                            <div className="mt-8">
+                                <label className="mb-3 block text-sm font-medium text-slate-700">
+                                    ¿Qué módulo te interesa probar primero?
+                                </label>
+                                <div className="grid grid-cols-3 gap-3">
+
+                                    {/* Opción POS */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModuleSelect('pos')}
+                                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'pos'
+                                            ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <Store className={`h-6 w-6 ${formData.moduloInicial === 'pos' ? 'text-blue-600' : 'text-slate-400'}`} />
+                                        Punto de Venta
+                                    </button>
+
+                                    {/* Opción Logística */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModuleSelect('logistica')}
+                                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'logistica'
+                                            ? 'border-purple-600 bg-purple-50 text-purple-700 ring-1 ring-purple-600'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <Truck className={`h-6 w-6 ${formData.moduloInicial === 'logistica' ? 'text-purple-600' : 'text-slate-400'}`} />
+                                        Logística
+                                    </button>
+
+                                    {/* Opción RRHH */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModuleSelect('rrhh')}
+                                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'rrhh'
+                                            ? 'border-orange-600 bg-orange-50 text-orange-700 ring-1 ring-orange-600'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <Users className={`h-6 w-6 ${formData.moduloInicial === 'rrhh' ? 'text-orange-600' : 'text-slate-400'}`} />
+                                        RRHH
+                                    </button>
+
+                                </div>
+                            </div>
+
+                            {/* Error estético */}
+                            {error && (
+                                <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20">
+                                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                                    <p>{error}</p>
+                                </div>
+                            )}
+
+                            {/* Botón Submit */}
+                            <div className="pt-4">
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full rounded-xl bg-blue-600 px-4 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-500 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                    {loading ? "Creando ecosistema..." : "Crear mi cuenta"}
+                                </button>
+                            </div>
+
+                            {/* Enlace Login */}
+                            <div className="text-center">
+                                <p className="text-sm text-slate-600">
+                                    ¿Ya tienes cuenta?{" "}
+                                    <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-500">
+                                        Inicia sesión aquí
+                                    </Link>
+                                </p>
+                            </div>
+
+                        </form>
+                    )}
 
                 </div>
             </div>

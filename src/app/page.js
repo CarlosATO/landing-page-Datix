@@ -14,31 +14,33 @@ import Link from "next/link";
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-blue-200">
-      {/* 1. Navbar */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <span className="text-3xl font-black tracking-tighter text-blue-700 dark:text-blue-500">
-              Datix
-            </span>
-          </div>
+      {/* 1. Navbar (Premium Dark Theme for high contrast) */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl transition-all duration-500">
+        <div className="mx-auto flex h-32 max-w-7xl items-center justify-between px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-2">
+            <img
+              src="/imagen/logo_datix.png"
+              alt="Datix Logo"
+              className="h-28 w-auto brightness-0 invert drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-300 hover:scale-110"
+            />
+          </Link>
 
-          <nav className="hidden gap-8 font-medium text-slate-600 dark:text-slate-300 md:flex lg:mx-auto">
+          <nav className="hidden gap-10 font-bold text-slate-100 md:flex lg:mx-auto text-lg tracking-wide">
             <Link
               href="#aplicaciones"
-              className="transition-colors hover:text-blue-600"
+              className="transition-all hover:text-blue-400 hover:-translate-y-0.5"
             >
               Aplicaciones
             </Link>
             <Link
               href="#precios"
-              className="transition-colors hover:text-blue-600"
+              className="transition-all hover:text-blue-400 hover:-translate-y-0.5"
             >
               Precios
             </Link>
             <Link
               href="#soporte"
-              className="transition-colors hover:text-blue-600"
+              className="transition-all hover:text-blue-400 hover:-translate-y-0.5"
             >
               Soporte
             </Link>
@@ -47,13 +49,13 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/login"
-              className="hidden rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800 sm:block"
+              className="hidden rounded-full border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-white/10 backdrop-blur-sm sm:block"
             >
               Iniciar Sesión
             </Link>
             <Link
               href="/register"
-              className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:scale-105 hover:bg-blue-500 active:scale-95"
+              className="rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:scale-105 hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] active:scale-95"
             >
               Crear Cuenta Gratis
             </Link>
@@ -388,21 +390,25 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 5. Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
-          <div className="mt-8 flex flex-col items-center gap-4 text-sm text-slate-500 md:order-1 md:mt-0 md:flex-row">
-            <span className="text-lg font-bold tracking-widest text-slate-900">
-              DATIX
-            </span>
-            <span className="hidden text-slate-300 md:inline-block">|</span>
-            <Link href="#" className="transition-colors hover:text-blue-600">
-              Términos y Condiciones
-            </Link>
-            <Link href="#" className="transition-colors hover:text-blue-600">
-              Política de Privacidad
-            </Link>
-            <p className="mt-4 md:ml-4 md:mt-0">
+      {/* 5. Footer (Dark Premium Theme) */}
+      <footer className="border-t border-white/10 bg-slate-950 py-16">
+        <div className="mx-auto max-w-7xl px-6 md:flex md:items-center md:justify-between lg:px-8">
+          <div className="flex flex-col items-center gap-6 md:order-1 md:flex-row">
+            <img
+              src="/imagen/logo_datix.png"
+              alt="Datix Logo"
+              className="h-16 w-auto brightness-0 invert opacity-90 transition-all hover:opacity-100"
+            />
+            <span className="hidden text-slate-800 md:inline-block">|</span>
+            <div className="flex gap-6 text-sm text-slate-400">
+              <Link href="#" className="transition-colors hover:text-white">
+                Términos y Condiciones
+              </Link>
+              <Link href="#" className="transition-colors hover:text-white">
+                Política de Privacidad
+              </Link>
+            </div>
+            <p className="mt-4 text-sm text-slate-500 md:ml-4 md:mt-0">
               &copy; 2026 Datix SpA. Todos los derechos reservados.
             </p>
           </div>
