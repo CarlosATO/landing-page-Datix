@@ -192,6 +192,13 @@ export default function PortalDashboard() {
                     }
                 } else {
                     console.warn("El token del usuario no tiene un company_id asignado.");
+                    // Fallback: Si no hay company_id, intentamos ver si tiene una empresa creada por él
+                    const { data: fallbackComp } = await supabase
+                        .from("companies")
+                        .select("*")
+                        .limit(1)
+                        .single();
+                    if (fallbackComp) setCompany(fallbackComp);
                 }
             } catch (err) {
                 console.error("Error al cargar datos:", err);
@@ -685,6 +692,19 @@ export default function PortalDashboard() {
                                                     <span className="text-xs font-medium text-white/50">RRHH (Prox)</span>
                                                 </div>
                                             </>
+                                        )}
+                                        {/* Estado Vacío: Si no es Owner/Manager y no tiene apps asignadas */}
+                                        {userRole !== 'OWNER' && userRole !== 'MANAGER' && Object.keys(userAppAccess).length === 0 && (
+                                            <div className="col-span-full py-20 text-center animate-in fade-in duration-700">
+                                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
+                                                    <Lock className="h-8 w-8 text-white/20" />
+                                                </div>
+                                                <h3 className="text-xl font-bold text-white">Sin módulos asignados</h3>
+                                                <p className="mt-2 text-white/40 max-w-sm mx-auto">
+                                                    Tu cuenta aún no tiene permisos para acceder a módulos. 
+                                                    Contacta al administrador de tu empresa para que te asigne un rol.
+                                                </p>
+                                            </div>
                                         )}
                                     </>
                                 )}

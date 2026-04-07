@@ -9,9 +9,6 @@ import {
     User,
     Mail,
     Lock,
-    Store,
-    Truck,
-    Users,
     CheckCircle2,
     AlertCircle
 } from "lucide-react";
@@ -30,7 +27,6 @@ export default function RegisterPage() {
         nombre: "",
         email: "",
         password: "",
-        moduloInicial: "pos"
     });
 
     // Estados de UI
@@ -43,9 +39,7 @@ export default function RegisterPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleModuleSelect = (modulo) => {
-        setFormData(prev => ({ ...prev, moduloInicial: modulo }));
-    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -61,7 +55,7 @@ export default function RegisterPage() {
                     data: {
                         full_name: formData.nombre,
                         empresa_nombre: formData.empresa,
-                        modulo_inicial: formData.moduloInicial
+                        modulo_inicial: "pos" // Asegura que los triggers de DB funcionen
                     }
                 }
             });
@@ -93,62 +87,73 @@ export default function RegisterPage() {
         }
     };
 
+
+
     return (
-        <div className="flex min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-200">
+        <div className="flex min-h-screen font-sans text-white selection:bg-brand-vivid/30">
 
             {/* 1. Lado Izquierdo (Branding / Marketing) */}
-            <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-950 p-12 lg:flex xl:p-20">
-                {/* Fondo Decorativo */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-blue-900/40 via-slate-950 to-slate-950"></div>
+            <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-brand-deep p-12 lg:flex xl:p-20">
+                {/* Background Effects */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(142,67,217,0.15),transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(76,48,115,0.2),transparent_60%)]"></div>
+
+                {/* Floating orbs */}
+                <div className="absolute top-32 right-20 h-64 w-64 rounded-full bg-brand-vivid/[0.07] blur-3xl animate-float"></div>
+                <div className="absolute bottom-20 left-10 h-48 w-48 rounded-full bg-brand-accent/[0.06] blur-3xl animate-float-slow"></div>
+
+                {/* Grid pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
 
                 {/* Logo */}
                 <div className="relative z-10">
                     <Link href="/">
-                        <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-32 w-auto brightness-0 invert" />
+                        <img
+                            src="/imagen/logo_datix.png"
+                            alt="Datix Logo"
+                            className="h-28 w-auto brightness-0 invert drop-shadow-[0_0_20px_rgba(142,67,217,0.5)] transition-all hover:scale-105"
+                        />
                     </Link>
                 </div>
 
                 {/* Texto Inspirador & Beneficios */}
                 <div className="relative z-10 mt-auto">
-                    <h2 className="mb-8 text-4xl font-bold leading-tight text-white xl:text-5xl">
-                        El primer paso para escalar tu negocio de forma inteligente.
+                    <h2 className="mb-8 text-4xl font-extrabold leading-tight xl:text-5xl">
+                        El primer paso para{" "}
+                        <span className="gradient-text">escalar tu negocio</span>{" "}
+                        de forma inteligente.
                     </h2>
 
-                    <div className="space-y-5 text-lg text-slate-300">
-                        <div className="flex items-center gap-3">
-                            <CheckCircle2 className="h-6 w-6 text-green-500" />
-                            <span>Sin tarjeta de crédito.</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <CheckCircle2 className="h-6 w-6 text-green-500" />
-                            <span>Cancela cuando quieras, sin amarras.</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <CheckCircle2 className="h-6 w-6 text-green-500" />
-                            <span>Soporte local en Chile y Latinoamérica.</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <CheckCircle2 className="h-6 w-6 text-green-500" />
-                            <span>Paga solo por lo que usas, crece a tu ritmo.</span>
-                        </div>
+                    <div className="space-y-5 text-lg text-white/60">
+                        {[
+                            "Sin tarjeta de crédito.",
+                            "Cancela cuando quieras, sin amarras.",
+                            "Soporte local en Chile y Latinoamérica.",
+                            "Paga solo por lo que usas, crece a tu ritmo.",
+                        ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <CheckCircle2 className="h-6 w-6 text-green-400 flex-shrink-0" />
+                                <span>{item}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
             {/* 2. Lado Derecho (Formulario de Registro) */}
-            <div className="flex w-full items-center justify-center p-8 lg:w-1/2">
-                <div className="w-full max-w-md">
+            <div className="flex w-full items-center justify-center bg-white p-8 lg:w-1/2">
+                <div className="w-full max-w-md animate-fade-in-up">
 
                     {/* Header en Móvil */}
                     <div className="mb-8 text-center lg:hidden">
                         <Link href="/">
-                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto dark:brightness-0 dark:invert" />
+                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto" />
                         </Link>
                     </div>
 
                     {/* Títulos */}
                     <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
                             Crea tu Ecosistema
                         </h1>
                         <p className="mt-3 text-slate-500">
@@ -158,13 +163,13 @@ export default function RegisterPage() {
 
                     {/* Formulario / Mensaje de Éxito */}
                     {success ? (
-                        <div className="flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-10 text-center shadow-lg">
+                        <div className="flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-surface-light p-10 text-center shadow-lg animate-scale-in">
                             <CheckCircle2 className="h-16 w-16 text-green-500" />
-                            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">¡Registro casi listo!</h2>
+                            <h2 className="text-2xl font-extrabold gradient-text">¡Registro casi listo!</h2>
                             <p className="text-slate-600">
                                 ¡Revisa tu bandeja de entrada! Te hemos enviado un enlace para confirmar tu correo y activar tu cuenta.
                             </p>
-                            <Link href="/login" className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-slate-800 hover:shadow-lg active:scale-[0.98]">
+                            <Link href="/login" className="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-vivid px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-vivid/20 transition-all hover:shadow-xl active:scale-[0.98]">
                                 Ir a Iniciar Sesión
                             </Link>
                         </div>
@@ -185,7 +190,7 @@ export default function RegisterPage() {
                                             value={formData.empresa}
                                             onChange={handleChange}
                                             required
-                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                             placeholder="Ej: Minimarket Los Andes"
                                         />
                                     </div>
@@ -204,7 +209,7 @@ export default function RegisterPage() {
                                             value={formData.nombre}
                                             onChange={handleChange}
                                             required
-                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                             placeholder="Ej: Juan Pérez"
                                         />
                                     </div>
@@ -223,7 +228,7 @@ export default function RegisterPage() {
                                             value={formData.email}
                                             onChange={handleChange}
                                             required
-                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                             placeholder="tu@email.com"
                                         />
                                     </div>
@@ -242,65 +247,18 @@ export default function RegisterPage() {
                                             value={formData.password}
                                             onChange={handleChange}
                                             required
-                                            className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                             placeholder="••••••••"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Selector de Módulo Inicial */}
-                            <div className="mt-8">
-                                <label className="mb-3 block text-sm font-medium text-slate-700">
-                                    ¿Qué módulo te interesa probar primero?
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
 
-                                    {/* Opción POS */}
-                                    <button
-                                        type="button"
-                                        onClick={() => handleModuleSelect('pos')}
-                                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'pos'
-                                            ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600'
-                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <Store className={`h-6 w-6 ${formData.moduloInicial === 'pos' ? 'text-blue-600' : 'text-slate-400'}`} />
-                                        Punto de Venta
-                                    </button>
-
-                                    {/* Opción Logística */}
-                                    <button
-                                        type="button"
-                                        onClick={() => handleModuleSelect('logistica')}
-                                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'logistica'
-                                            ? 'border-purple-600 bg-purple-50 text-purple-700 ring-1 ring-purple-600'
-                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <Truck className={`h-6 w-6 ${formData.moduloInicial === 'logistica' ? 'text-purple-600' : 'text-slate-400'}`} />
-                                        Logística
-                                    </button>
-
-                                    {/* Opción RRHH */}
-                                    <button
-                                        type="button"
-                                        onClick={() => handleModuleSelect('rrhh')}
-                                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all ${formData.moduloInicial === 'rrhh'
-                                            ? 'border-orange-600 bg-orange-50 text-orange-700 ring-1 ring-orange-600'
-                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <Users className={`h-6 w-6 ${formData.moduloInicial === 'rrhh' ? 'text-orange-600' : 'text-slate-400'}`} />
-                                        RRHH
-                                    </button>
-
-                                </div>
-                            </div>
 
                             {/* Error estético */}
                             {error && (
-                                <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20">
+                                <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20 animate-fade-in-up">
                                     <AlertCircle className="h-5 w-5 flex-shrink-0" />
                                     <p>{error}</p>
                                 </div>
@@ -311,7 +269,7 @@ export default function RegisterPage() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full rounded-xl bg-blue-600 px-4 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-500 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+                                    className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-vivid px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-brand-vivid/20 transition-all hover:shadow-xl hover:shadow-brand-vivid/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {loading ? "Creando ecosistema..." : "Crear mi cuenta"}
                                 </button>
@@ -321,7 +279,7 @@ export default function RegisterPage() {
                             <div className="text-center">
                                 <p className="text-sm text-slate-600">
                                     ¿Ya tienes cuenta?{" "}
-                                    <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-500">
+                                    <Link href="/login" className="font-semibold text-brand-accent hover:text-brand-vivid transition-colors">
                                         Inicia sesión aquí
                                     </Link>
                                 </p>

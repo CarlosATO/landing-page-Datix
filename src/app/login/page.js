@@ -21,7 +21,7 @@ export default function LoginPage() {
     const [isProcessingHash, setIsProcessingHash] = useState(false);
     const hasProcessedHash = React.useRef(false);
 
-    // 🔥 NUEVA ARQUITECTURA: Procesamiento de Hash para SSO desde los módulos
+    //  NUEVA ARQUITECTURA: Procesamiento de Hash para SSO desde los módulos
     React.useEffect(() => {
         const processHash = async () => {
             if (hasProcessedHash.current) return;
@@ -37,14 +37,14 @@ export default function LoginPage() {
                     if (access_token && refresh_token) {
                         // Limpiamos el hash para que no se vea feo
                         window.history.replaceState(null, '', window.location.pathname);
-                        
+
                         const { error: sessionError } = await supabase.auth.setSession({
                             access_token,
                             refresh_token
                         });
 
                         if (sessionError) throw sessionError;
-                        
+
                         // No refrescamos manualmente aquí para evitar 429 (Rate Limit)
                         router.push('/portal');
                     }
@@ -91,31 +91,31 @@ export default function LoginPage() {
 
     if (loading || isProcessingHash) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-white p-8">
+            <div className="flex min-h-screen items-center justify-center bg-brand-deep">
                 <div className="text-center">
-                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-slate-500 font-medium">Sincronizando tu sesión...</p>
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-vivid border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-white/60 font-medium">Sincronizando tu sesión...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen font-sans text-slate-900 selection:bg-blue-200">
+        <div className="flex min-h-screen font-sans text-slate-900 selection:bg-brand-vivid/30">
 
             {/* Lado Izquierdo (Formulario de Login) */}
             <div className="flex w-full items-center justify-center bg-white p-8 lg:w-1/2">
-                <div className="w-full max-w-md">
+                <div className="w-full max-w-md animate-fade-in-up">
 
                     {/* Header en Móvil */}
                     <div className="mb-8 text-center lg:hidden">
                         <Link href="/">
-                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto dark:brightness-0 dark:invert" />
+                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto" />
                         </Link>
                     </div>
 
                     <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
                             Iniciar Sesión
                         </h1>
                         <p className="mt-3 text-slate-500">
@@ -137,7 +137,7 @@ export default function LoginPage() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                         placeholder="tu@email.com"
                                     />
                                 </div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                         placeholder="••••••••"
                                     />
                                 </div>
@@ -164,14 +164,14 @@ export default function LoginPage() {
 
                         {/* Enlace Olvidó Contraseña */}
                         <div className="flex justify-end">
-                            <Link href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            <Link href="/forgot-password" className="text-sm font-medium text-brand-accent hover:text-brand-vivid transition-colors">
                                 ¿Olvidaste tu contraseña?
                             </Link>
                         </div>
 
                         {/* Manejo de Error */}
                         {error && (
-                            <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20">
+                            <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20 animate-fade-in-up">
                                 <AlertCircle className="h-5 w-5 flex-shrink-0" />
                                 <p>{error}</p>
                             </div>
@@ -182,7 +182,7 @@ export default function LoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-500 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary to-brand-vivid px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-brand-vivid/20 transition-all hover:shadow-xl hover:shadow-brand-vivid/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {loading ? "Verificando..." : (
                                     <>
@@ -196,7 +196,7 @@ export default function LoginPage() {
                         <div className="text-center pt-2">
                             <p className="text-sm text-slate-600">
                                 ¿Aún no tienes cuenta?{" "}
-                                <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-500">
+                                <Link href="/register" className="font-semibold text-brand-accent hover:text-brand-vivid transition-colors">
                                     Regístrate aquí
                                 </Link>
                             </p>
@@ -206,19 +206,32 @@ export default function LoginPage() {
             </div>
 
             {/* Lado Derecho (Branding / Marketing) */}
-            <div className="relative hidden w-1/2 flex-col justify-center overflow-hidden bg-slate-900 p-12 lg:flex xl:p-20">
-                {/* Fondo Decorativo Sutil */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-800/20 via-slate-900 to-slate-950"></div>
+            <div className="relative hidden w-1/2 flex-col justify-center overflow-hidden bg-brand-deep p-12 lg:flex xl:p-20">
+                {/* Background Effects */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(142,67,217,0.15),transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(76,48,115,0.2),transparent_60%)]"></div>
+
+                {/* Floating orbs */}
+                <div className="absolute top-20 right-20 h-48 w-48 rounded-full bg-brand-vivid/[0.08] blur-3xl animate-float"></div>
+                <div className="absolute bottom-20 left-10 h-64 w-64 rounded-full bg-brand-accent/[0.06] blur-3xl animate-float-slow"></div>
+
+                {/* Grid pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
 
                 {/* Contenido Centro */}
                 <div className="relative z-10 flex flex-col items-center justify-center text-center">
                     <Link href="/">
-                        <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-32 w-auto brightness-0 invert" />
+                        <img
+                            src="/imagen/logo_datix.png"
+                            alt="Datix Logo"
+                            className="h-28 w-auto brightness-0 invert drop-shadow-[0_0_20px_rgba(142,67,217,0.5)] transition-all hover:scale-105"
+                        />
                     </Link>
-                    <h2 className="text-3xl font-bold leading-tight text-white xl:text-4xl">
-                        Bienvenido de vuelta a tu Ecosistema.
+                    <h2 className="mt-8 text-3xl font-extrabold leading-tight text-white xl:text-4xl">
+                        Bienvenido de vuelta a tu{" "}
+                        <span className="gradient-text">Ecosistema.</span>
                     </h2>
-                    <p className="mt-4 text-lg text-slate-400">
+                    <p className="mt-4 text-lg text-white/50 max-w-md">
                         Todas las herramientas que tu negocio necesita, siempre seguras y sincronizadas.
                     </p>
                 </div>
