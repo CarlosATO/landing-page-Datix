@@ -27,6 +27,20 @@ const AVAILABLE_APPS = [
     { id: 'ADQUISICIONES', name: 'Adquisiciones', roles: [{ v: 'BUYER', l: 'Comprador' }, { v: 'MANAGER', l: 'Jefe de Compras' }] }
 ];
 
+const APP_OPENERS = {
+    POS: { label: 'Caja POS', url: 'http://localhost:5173/pos' },
+    ADQUISICIONES: { label: 'Adquisiciones', url: 'http://localhost:5174/dashboard-compras' }
+};
+
+const MODULE_METADATA_TO_ROLE = {
+    pos: { POS: 'MANAGER' },
+    adquisiciones: { ADQUISICIONES: 'MANAGER' },
+    logistica: { LOGISTICA: 'MANAGER' },
+    rrhh: { RRHH: 'ADMIN' }
+};
+
+const toUpperValue = (value) => (value ?? '').toString().toUpperCase();
+
 // Inicializa el cliente de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
@@ -150,6 +164,7 @@ export default function PortalDashboard() {
                         // Ya no necesitamos hacer el select a 'company_users' para el rol
                         const role = currentUser.app_metadata?.role || 'MEMBER';
                         setUserRole(role);
+                        setUserAppAccess(currentUser.app_metadata?.module_roles || {});
 
                         // Cargar settings del usuario como módulo_roles y must_change_password
                         const { data: myUserRel } = await supabase
@@ -158,6 +173,22 @@ export default function PortalDashboard() {
                             .eq('user_id', currentUser.id)
                             .eq('company_id', jwtCompanyId)
                             .single();
+
+                        let effectiveModuleRoles = myUserRel?.module_roles || currentUser.app_metadata?.module_roles || {};
+
+                        // Auto-repair: si el usuario nuevo quedó sin módulos, intentamos inferir desde user_metadata.modulo_inicial
+                        if (Object.keys(effectiveModuleRoles).length === 0) {
+                            const inferred = MODULE_METADATA_TO_ROLE[currentUser.user_metadata?.modulo_inicial];
+                            if (inferred && myUserRel?.id) {
+                                const { error: repairError } = await supabase
+                                    .from('company_users')
+                                    .update({ module_roles: inferred })
+                                    .eq('id', myUserRel.id);
+                                if (!repairError) {
+                                    effectiveModuleRoles = inferred;
+                                }
+                            }
+                        }
                         
                         // AUTO-HEALING: El trigger de DB original no graba nombre ni correo para el Dueño.
                         // Reparamos este registro en tiempo real de forma silenciosa la primera vez.
@@ -181,12 +212,8 @@ export default function PortalDashboard() {
                                 .from('company_users')
                                 .select('*');
                             if (teamData) setTeamMembers(teamData);
-                        } else {
-                            // Si es empleado base (MEMBER), cargar sus permisos de módulos
-                            if (myUserRel?.module_roles) {
-                                setUserAppAccess(myUserRel.module_roles);
-                            }
                         }
+                        setUserAppAccess(effectiveModuleRoles);
                     } else {
                         console.error("No se pudo cargar la configuración de la empresa vinculada al JWT.");
                     }
@@ -257,30 +284,39 @@ export default function PortalDashboard() {
         e.preventDefault();
         setIsSavingOnboarding(true);
         try {
+            const normalizedOnboarding = {
+                rut: toUpperValue(onboardingData.rut),
+                activity: toUpperValue(onboardingData.activity),
+                address: toUpperValue(onboardingData.address),
+                city: toUpperValue(onboardingData.city),
+                phone: toUpperValue(onboardingData.phone),
+                fantasy_name: toUpperValue(onboardingData.fantasy_name) || toUpperValue(company.name)
+            };
             const { error } = await supabase
                 .from('companies')
                 .update({
-                    rut: onboardingData.rut,
-                    activity: onboardingData.activity,
-                    address: onboardingData.address,
-                    city: onboardingData.city,
-                    phone: onboardingData.phone,
-                    fantasy_name: onboardingData.fantasy_name || company.name
+                    rut: normalizedOnboarding.rut,
+                    activity: normalizedOnboarding.activity,
+                    address: normalizedOnboarding.address,
+                    city: normalizedOnboarding.city,
+                    phone: normalizedOnboarding.phone,
+                    fantasy_name: normalizedOnboarding.fantasy_name
                 })
                 .eq('id', company.id);
 
             if (error) throw error;
-            
+             
             // Actualizamos la empresa en el estado local para desbloquear instantáneamente la UI
             setCompany(prev => ({
                 ...prev,
-                rut: onboardingData.rut,
-                activity: onboardingData.activity,
-                address: onboardingData.address,
-                city: onboardingData.city,
-                phone: onboardingData.phone,
-                fantasy_name: onboardingData.fantasy_name || prev.name
+                rut: normalizedOnboarding.rut,
+                activity: normalizedOnboarding.activity,
+                address: normalizedOnboarding.address,
+                city: normalizedOnboarding.city,
+                phone: normalizedOnboarding.phone,
+                fantasy_name: normalizedOnboarding.fantasy_name
             }));
+            setOnboardingData(normalizedOnboarding);
         } catch (err) {
             console.error("Error guardando onboarding:", err);
             alert("No se pudo guardar la configuración. Revisa los datos.");
@@ -302,12 +338,17 @@ export default function PortalDashboard() {
     const handleOpenAdquisiciones = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-            // El dashboard principal de Adquisiciones suele ser la raíz, pero por seguridad apuntamos a una ruta dentro del layout.
-            const url = `http://localhost:5174/dashboard#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            const url = `http://localhost:5174/dashboard-compras#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
             window.location.href = url;
         } else {
             window.location.href = '/login';
         }
+    };
+
+    const handleOpenApp = async (appId) => {
+        if (appId === 'POS') return handleOpenPOS();
+        if (appId === 'ADQUISICIONES') return handleOpenAdquisiciones();
+        alert('Este módulo estará disponible próximamente.');
     };
 
     const handleToggleModule = (appId, defaultRole) => {
@@ -495,6 +536,14 @@ export default function PortalDashboard() {
     }
 
     const isSubscriptionActive = company?.subscription_status === 'active' || company?.subscription_status === 'trialing';
+    const isPrivilegedUser = userRole === 'OWNER' || userRole === 'MANAGER';
+    const enabledAppIds = new Set(
+        Object.entries(userAppAccess || {})
+            .filter(([, role]) => Boolean(role))
+            .map(([appId]) => appId)
+    );
+    const visibleApps = AVAILABLE_APPS.filter((app) => enabledAppIds.has(app.id));
+    const noModuleAccess = visibleApps.length === 0;
 
     return (
         <div className="flex flex-col h-screen font-sans" style={{ backgroundColor: '#45316D' }}>
@@ -588,7 +637,7 @@ export default function PortalDashboard() {
                                                             required
                                                             placeholder="76.xxx.xxx-x"
                                                             value={onboardingData.rut}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, rut: e.target.value})}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, rut: toUpperValue(e.target.value)})}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
@@ -598,7 +647,7 @@ export default function PortalDashboard() {
                                                             required
                                                             placeholder="Ej: Retail, Ferretería..."
                                                             value={onboardingData.activity}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, activity: e.target.value})}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, activity: toUpperValue(e.target.value)})}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
@@ -608,7 +657,7 @@ export default function PortalDashboard() {
                                                             required
                                                             placeholder="Calle, Número, Ciudad"
                                                             value={onboardingData.address}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, address: e.target.value})}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, address: toUpperValue(e.target.value)})}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
@@ -617,7 +666,7 @@ export default function PortalDashboard() {
                                                         <input 
                                                             placeholder="+56 9 ..."
                                                             value={onboardingData.phone}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, phone: e.target.value})}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, phone: toUpperValue(e.target.value)})}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
@@ -626,7 +675,7 @@ export default function PortalDashboard() {
                                                         <input 
                                                             placeholder="Santiago, Concepción..."
                                                             value={onboardingData.city}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, city: e.target.value})}
+                                                            onChange={(e) => setOnboardingData({...onboardingData, city: toUpperValue(e.target.value)})}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
@@ -645,64 +694,41 @@ export default function PortalDashboard() {
                                     </div>
                                 ) : (
                                     <>
-                                        {/* POS */}
-                                        {(userRole === 'OWNER' || userRole === 'MANAGER' || userAppAccess['POS']) && (
-                                            <div className="group flex flex-col items-center gap-3">
-                                                <button 
-                                                    onClick={handleOpenPOS}
-                                                    className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
-                                                >
-                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                                                    <Store className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
-                                                </button>
-                                                <span className="text-sm font-medium text-white/90 group-hover:text-white">Caja POS</span>
-                                            </div>
-                                        )}
+                                        {visibleApps.map((app) => {
+                                            const Icon = app.id === 'POS' ? Store : app.id === 'ADQUISICIONES' ? FileText : app.id === 'LOGISTICA' ? Package : Users;
+                                            const opener = APP_OPENERS[app.id];
+                                            const isAvailable = Boolean(opener);
 
-                                        {/* Adquisiciones */}
-                                        {(userRole === 'OWNER' || userRole === 'MANAGER' || userAppAccess['ADQUISICIONES']) && (
-                                            <div className="group flex flex-col items-center gap-3">
-                                                <button 
-                                                    onClick={handleOpenAdquisiciones}
-                                                    className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 shadow-xl ring-1 ring-white/20 transition-all hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95 group"
-                                                >
-                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                                                    <FileText className="h-10 w-10 text-white opacity-90 group-hover:opacity-100" />
-                                                </button>
-                                                <span className="text-sm font-medium text-white/90 group-hover:text-white">Adquisiciones</span>
-                                            </div>
-                                        )}
-
-                                        {/* Sólo visibles para Dueños o Managers */}
-                                        {(userRole === 'OWNER' || userRole === 'MANAGER') && (
-                                            <>
-                                                {/* Logística */}
-                                                <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
-                                                    <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
-                                                        <Package className="h-10 w-10 text-white/40" />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-white/50">Logística (Prox)</span>
+                                            return (
+                                                <div key={app.id} className={`group flex flex-col items-center gap-3 ${isAvailable ? '' : 'opacity-50'}`}>
+                                                    <button
+                                                        onClick={() => handleOpenApp(app.id)}
+                                                        className={`relative flex h-24 w-24 items-center justify-center rounded-2xl ring-1 transition-all ${isAvailable
+                                                            ? 'bg-white/10 shadow-xl ring-white/20 hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95'
+                                                            : 'bg-white/5 shadow-inner ring-white/10 cursor-not-allowed'
+                                                            }`}
+                                                    >
+                                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
+                                                        <Icon className={`h-10 w-10 ${isAvailable ? 'text-white opacity-90 group-hover:opacity-100' : 'text-white/40'}`} />
+                                                    </button>
+                                                    <span className={`text-sm font-medium ${isAvailable ? 'text-white/90 group-hover:text-white' : 'text-white/50'}`}>
+                                                        {isAvailable ? app.name : `${app.name} (Prox)`}
+                                                    </span>
                                                 </div>
+                                            );
+                                        })}
 
-                                                {/* RRHH */}
-                                                <div className="group flex flex-col items-center gap-3 opacity-50 cursor-not-allowed">
-                                                    <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10">
-                                                        <Users className="h-10 w-10 text-white/40" />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-white/50">RRHH (Prox)</span>
-                                                </div>
-                                            </>
-                                        )}
-                                        {/* Estado Vacío: Si no es Owner/Manager y no tiene apps asignadas */}
-                                        {userRole !== 'OWNER' && userRole !== 'MANAGER' && Object.keys(userAppAccess).length === 0 && (
+                                        {/* Estado Vacío: sin módulos asignados */}
+                                        {noModuleAccess && (
                                             <div className="col-span-full py-20 text-center animate-in fade-in duration-700">
                                                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
                                                     <Lock className="h-8 w-8 text-white/20" />
                                                 </div>
                                                 <h3 className="text-xl font-bold text-white">Sin módulos asignados</h3>
                                                 <p className="mt-2 text-white/40 max-w-sm mx-auto">
-                                                    Tu cuenta aún no tiene permisos para acceder a módulos. 
-                                                    Contacta al administrador de tu empresa para que te asigne un rol.
+                                                    {isPrivilegedUser
+                                                        ? 'Debes asignar al menos un módulo para comenzar la prueba.'
+                                                        : 'Tu cuenta aún no tiene permisos para acceder a módulos. Contacta al administrador de tu empresa para que te asigne un rol.'}
                                                 </p>
                                             </div>
                                         )}

@@ -9,6 +9,10 @@ import {
     User,
     Mail,
     Lock,
+    Store,
+    FileText,
+    Package,
+    Users as UsersIcon,
     CheckCircle2,
     AlertCircle
 } from "lucide-react";
@@ -17,6 +21,16 @@ import {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 const supabase = createBrowserClient(supabaseUrl, supabaseKey);
+
+const MODULE_CATALOG = [
+    { id: "POS", metadataValue: "pos", name: "Caja POS", description: "Ventas y caja para punto de venta.", icon: Store, availableNow: true },
+    { id: "ADQUISICIONES", metadataValue: "adquisiciones", name: "Adquisiciones", description: "Compras, proveedores y órdenes.", icon: FileText, availableNow: true },
+    { id: "LOGISTICA", metadataValue: "logistica", name: "Logística", description: "Despachos y operación logística.", icon: Package, availableNow: false },
+    { id: "RRHH", metadataValue: "rrhh", name: "Recursos Humanos", description: "Gestión de personal y contratos.", icon: UsersIcon, availableNow: false },
+];
+
+const toUpperValue = (value) => (value ?? "").toString().toUpperCase();
+const toEmailValue = (value) => (value ?? "").toString().trim().toLowerCase();
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -27,6 +41,7 @@ export default function RegisterPage() {
         nombre: "",
         email: "",
         password: "",
+        trialModule: "POS",
     });
 
     // Estados de UI
@@ -36,7 +51,15 @@ export default function RegisterPage() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            if (name === "email") {
+                return { ...prev, [name]: toEmailValue(value) };
+            }
+            if (name === "password" || name === "trialModule") {
+                return { ...prev, [name]: value };
+            }
+            return { ...prev, [name]: toUpperValue(value) };
+        });
     };
 
 
@@ -49,13 +72,13 @@ export default function RegisterPage() {
         try {
             // Paso 1: Crear Usuario Auth en Supabase
             const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: formData.email,
+                email: toEmailValue(formData.email),
                 password: formData.password,
                 options: {
                     data: {
-                        full_name: formData.nombre,
-                        empresa_nombre: formData.empresa,
-                        modulo_inicial: "pos" // Asegura que los triggers de DB funcionen
+                        full_name: toUpperValue(formData.nombre),
+                        empresa_nombre: toUpperValue(formData.empresa),
+                        modulo_inicial: MODULE_CATALOG.find(m => m.id === formData.trialModule)?.metadataValue || "pos"
                     }
                 }
             });
@@ -79,6 +102,8 @@ export default function RegisterPage() {
                 errorMessage = "Este correo electrónico ya se encuentra registrado. Por favor, inicia sesión.";
             } else if (errorMessage.includes("Password")) {
                 errorMessage = "La contraseña debe tener al menos 6 caracteres.";
+            } else if (errorMessage.includes("rate limit exceeded")) {
+                errorMessage = "Demasiados intentos seguidos. Por favor, espera un minuto antes de volver a registrarte.";
             }
 
             setError(errorMessage);
@@ -250,6 +275,42 @@ export default function RegisterPage() {
                                             className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
                                             placeholder="••••••••"
                                         />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">Módulo para tu prueba de 14 días (elige 1)</label>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        {MODULE_CATALOG.map((module) => {
+                                            const Icon = module.icon;
+                                            const selected = formData.trialModule === module.id;
+                                            return (
+                                                <button
+                                                    key={module.id}
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, trialModule: module.id }))}
+                                                    className={`rounded-xl border p-3 text-left transition-all ${selected
+                                                        ? 'border-brand-accent bg-brand-vivid/10 ring-2 ring-brand-vivid/20'
+                                                        : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100/80'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-start gap-2">
+                                                        <div className={`mt-0.5 rounded-md p-1.5 ${selected ? 'bg-brand-vivid/20 text-brand-accent' : 'bg-slate-200 text-slate-500'}`}>
+                                                            <Icon className="h-4 w-4" />
+                                                        </div>
+                                                        <div>
+                                                            <p className={`text-sm font-bold ${selected ? 'text-slate-900' : 'text-slate-700'}`}>{module.name}</p>
+                                                            <p className="mt-0.5 text-xs text-slate-500">{module.description}</p>
+                                                            {!module.availableNow && (
+                                                                <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                                                                    Próximamente
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
