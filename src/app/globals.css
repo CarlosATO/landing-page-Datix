@@ -5,14 +5,14 @@
   --font-mono: var(--font-geist-mono);
   
   /* Brand Colors */
-  --color-brand-deep: #0F0A1A;
-  --color-brand-dark: #1A1028;
-  --color-brand-bg: #45316D;
-  --color-brand-primary: #4C3073;
-  --color-brand-navbar: #5B4385;
-  --color-brand-accent: #6D52A3;
-  --color-brand-vivid: #8E43D9;
-  --color-brand-light: #BC91D9;
+  --color-brand-deep: #FAFBFC;
+  --color-brand-dark: #F3F4F8;
+  --color-brand-bg: #EEE9F8;
+  --color-brand-primary: #E8DFF5;
+  --color-brand-navbar: #FFFFFF;
+  --color-brand-accent: #8E63D9;
+  --color-brand-vivid: #7C3AED;
+  --color-brand-light: #6D28D9;
   --color-brand-glow: #A855F7;
   --color-brand-danger: #EF4444;
 
