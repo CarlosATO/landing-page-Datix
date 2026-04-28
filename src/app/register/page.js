@@ -11,6 +11,7 @@ import {
     Lock,
     Store,
     FileText,
+    Pill,
     Package,
     Users as UsersIcon,
     CheckCircle2,
@@ -25,6 +26,7 @@ const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 const MODULE_CATALOG = [
     { id: "POS", metadataValue: "pos", name: "Caja POS", description: "Ventas y caja para punto de venta.", icon: Store, availableNow: true },
     { id: "ADQUISICIONES", metadataValue: "adquisiciones", name: "Adquisiciones", description: "Compras, proveedores y órdenes.", icon: FileText, availableNow: true },
+    { id: "FARMACIAS", metadataValue: "farmacias", name: "Farmacias", description: "Gestión farmacéutica y trazabilidad.", icon: Pill, availableNow: true },
     { id: "LOGISTICA", metadataValue: "logistica", name: "Logística", description: "Despachos y operación logística.", icon: Package, availableNow: false },
     { id: "RRHH", metadataValue: "rrhh", name: "Recursos Humanos", description: "Gestión de personal y contratos.", icon: UsersIcon, availableNow: false },
 ];
@@ -118,17 +120,17 @@ export default function RegisterPage() {
         <div className="flex min-h-screen font-sans text-white selection:bg-brand-vivid/30">
 
             {/* 1. Lado Izquierdo (Branding / Marketing) */}
-            <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-brand-deep p-12 lg:flex xl:p-20">
+            <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-[linear-gradient(145deg,#F8F6FC_0%,#EEE9F8_52%,#E8DFF5_100%)] p-12 lg:flex xl:p-20">
                 {/* Background Effects */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(142,67,217,0.15),transparent_60%)]"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(76,48,115,0.2),transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(142,67,217,0.2),transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(76,48,115,0.22),transparent_60%)]"></div>
 
                 {/* Floating orbs */}
                 <div className="absolute top-32 right-20 h-64 w-64 rounded-full bg-brand-vivid/[0.07] blur-3xl animate-float"></div>
                 <div className="absolute bottom-20 left-10 h-48 w-48 rounded-full bg-brand-accent/[0.06] blur-3xl animate-float-slow"></div>
 
                 {/* Grid pattern */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(124,58,237,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(124,58,237,0.08)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
 
                 {/* Logo */}
                 <div className="relative z-10">
@@ -136,20 +138,24 @@ export default function RegisterPage() {
                         <img
                             src="/imagen/logo_datix.png"
                             alt="Datix Logo"
-                            className="h-28 w-auto brightness-0 invert drop-shadow-[0_0_20px_rgba(142,67,217,0.5)] transition-all hover:scale-105"
+                            className="h-28 w-auto drop-shadow-[0_6px_20px_rgba(124,58,237,0.28)] transition-all hover:scale-105"
+                            style={{
+                                filter:
+                                    "brightness(0) saturate(100%) invert(31%) sepia(60%) saturate(1200%) hue-rotate(240deg) brightness(94%) contrast(106%)",
+                            }}
                         />
                     </Link>
                 </div>
 
                 {/* Texto Inspirador & Beneficios */}
                 <div className="relative z-10 mt-auto">
-                    <h2 className="mb-8 text-4xl font-extrabold leading-tight xl:text-5xl">
+                    <h2 className="mb-8 text-4xl font-extrabold leading-tight text-slate-900 xl:text-5xl">
                         El primer paso para{" "}
                         <span className="gradient-text">escalar tu negocio</span>{" "}
                         de forma inteligente.
                     </h2>
 
-                    <div className="space-y-5 text-lg text-white/60">
+                    <div className="space-y-5 text-lg text-slate-700">
                         {[
                             "Sin tarjeta de crédito.",
                             "Cancela cuando quieras, sin amarras.",
@@ -157,7 +163,7 @@ export default function RegisterPage() {
                             "Paga solo por lo que usas, crece a tu ritmo.",
                         ].map((item, i) => (
                             <div key={i} className="flex items-center gap-3">
-                                <CheckCircle2 className="h-6 w-6 text-green-400 flex-shrink-0" />
+                                <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-green-600" />
                                 <span>{item}</span>
                             </div>
                         ))}
@@ -194,7 +200,7 @@ export default function RegisterPage() {
                             <p className="text-slate-600">
                                 ¡Revisa tu bandeja de entrada! Te hemos enviado un enlace para confirmar tu correo y activar tu cuenta.
                             </p>
-                            <Link href="/login" className="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-vivid px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-vivid/20 transition-all hover:shadow-xl active:scale-[0.98]">
+                            <Link href="/login" className="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-accent to-brand-vivid px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition-all hover:shadow-xl hover:shadow-violet-900/35 active:scale-[0.98]">
                                 Ir a Iniciar Sesión
                             </Link>
                         </div>
@@ -330,7 +336,7 @@ export default function RegisterPage() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-vivid px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-brand-vivid/20 transition-all hover:shadow-xl hover:shadow-brand-vivid/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+                                    className="w-full rounded-xl bg-gradient-to-r from-brand-accent to-brand-vivid px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition-all hover:shadow-xl hover:shadow-violet-900/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {loading ? "Creando ecosistema..." : "Crear mi cuenta"}
                                 </button>

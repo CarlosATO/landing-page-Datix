@@ -101,7 +101,7 @@ function SolutionsDropdown() {
       name: 'Farmacias',
       icon: Pill,
       description: 'Gestión farmacéutica especializada',
-      status: 'coming',
+      status: 'available',
       iconBg: 'bg-teal-100',
       iconColor: 'text-teal-600'
     }
@@ -185,11 +185,19 @@ function MobileMenu({ isOpen, onClose }) {
       <Link href="#soporte" onClick={onClose} className="text-2xl font-bold text-gray-900 hover:text-brand-vivid transition-colors">
         Cercanía
       </Link>
-      <div className="flex flex-col gap-4 mt-4 w-64">
-        <Link href="/login" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-6 py-3 text-center font-semibold text-gray-700 hover:bg-gray-50 transition-all">
+      <div className="mt-4 flex w-64 flex-col gap-4">
+        <Link
+          href="/login"
+          onClick={onClose}
+          className="rounded-lg border border-slate-400 bg-white px-6 py-3 text-center font-semibold text-slate-900 shadow-sm transition-all hover:border-brand-vivid/60 hover:bg-slate-50"
+        >
           Iniciar Sesión
         </Link>
-        <Link href="/register" onClick={onClose} className="rounded-lg bg-gradient-to-r from-brand-accent to-brand-vivid px-6 py-3 text-center font-semibold text-white shadow-lg shadow-brand-vivid/30 hover:shadow-xl hover:shadow-brand-vivid/40 transition-all">
+        <Link
+          href="/register"
+          onClick={onClose}
+          className="rounded-lg bg-gradient-to-r from-[#6D28D9] to-[#4C1D95] px-6 py-3 text-center font-semibold text-white shadow-lg shadow-violet-900/35 transition-all hover:shadow-xl hover:shadow-violet-900/45"
+        >
           Crear Cuenta Gratis
         </Link>
       </div>
@@ -250,13 +258,13 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-3 flex-shrink-0">
             <Link
               href="/login"
-              className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-brand-vivid transition-colors duration-200"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-all duration-200 hover:border-brand-vivid/60 hover:bg-slate-50"
             >
               Acceder
             </Link>
             <Link
               href="/register"
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-accent to-brand-vivid rounded-lg shadow-lg shadow-brand-vivid/20 hover:shadow-xl hover:shadow-brand-vivid/30 transition-all duration-200 hover:scale-105 active:scale-95"
+              className="rounded-lg bg-gradient-to-r from-[#6D28D9] to-[#4C1D95] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-violet-900/45 active:scale-95"
             >
               Probar Gratis
             </Link>
@@ -531,8 +539,8 @@ export default function LandingPage() {
                   <Pill className="h-7 w-7 text-teal-600" />
                 </div>
                 <div className="mb-3">
-                  <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-300">
-                    ◷ Próximamente
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-300">
+                    ● Disponible
                   </span>
                 </div>
                 <h3 className="mb-4 text-3xl font-extrabold tracking-tight sm:text-4xl text-gray-900">

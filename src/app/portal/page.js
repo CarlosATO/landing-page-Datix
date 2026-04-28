@@ -10,6 +10,7 @@ import {
     LogOut,
     Store,
     Package,
+    Pill,
     Users,
     ExternalLink,
     FileText,
@@ -24,17 +25,20 @@ const AVAILABLE_APPS = [
     { id: 'POS', name: 'Caja POS', reversed: false, roles: [{ v: 'CASHIER', l: 'Cajero' }, { v: 'MANAGER', l: 'Jefe de Local' }] },
     { id: 'LOGISTICA', name: 'Logística', roles: [{ v: 'STOCKER', l: 'Bodeguero' }, { v: 'MANAGER', l: 'Jefe de Operaciones' }] },
     { id: 'RRHH', name: 'Recursos Humanos', roles: [{ v: 'ASSISTANT', l: 'Asistente' }, { v: 'ADMIN', l: 'Administrador' }] },
-    { id: 'ADQUISICIONES', name: 'Adquisiciones', roles: [{ v: 'BUYER', l: 'Comprador' }, { v: 'MANAGER', l: 'Jefe de Compras' }] }
+    { id: 'ADQUISICIONES', name: 'Adquisiciones', roles: [{ v: 'BUYER', l: 'Comprador' }, { v: 'MANAGER', l: 'Jefe de Compras' }] },
+    { id: 'FARMACIAS', name: 'Farmacias', roles: [{ v: 'PHARMACIST', l: 'Químico Farmacéutico' }, { v: 'ASSISTANT', l: 'Asistente de Farmacia' }] }
 ];
 
 const APP_OPENERS = {
     POS: { label: 'Caja POS', url: 'http://localhost:5173/pos' },
-    ADQUISICIONES: { label: 'Adquisiciones', url: 'http://localhost:5174/dashboard-compras' }
+    ADQUISICIONES: { label: 'Adquisiciones', url: 'http://localhost:5174/dashboard-compras' },
+    FARMACIAS: { label: 'Farmacias', url: 'http://localhost:5175' }
 };
 
 const MODULE_METADATA_TO_ROLE = {
     pos: { POS: 'MANAGER' },
     adquisiciones: { ADQUISICIONES: 'MANAGER' },
+    farmacias: { FARMACIAS: 'PHARMACIST' },
     logistica: { LOGISTICA: 'MANAGER' },
     rrhh: { RRHH: 'ADMIN' }
 };
@@ -345,9 +349,20 @@ export default function PortalDashboard() {
         }
     };
 
+    const handleOpenFarmacias = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            const url = `http://localhost:5175#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            window.location.href = url;
+        } else {
+            window.location.href = '/login';
+        }
+    };
+
     const handleOpenApp = async (appId) => {
         if (appId === 'POS') return handleOpenPOS();
         if (appId === 'ADQUISICIONES') return handleOpenAdquisiciones();
+        if (appId === 'FARMACIAS') return handleOpenFarmacias();
         alert('Este módulo estará disponible próximamente.');
     };
 
@@ -695,7 +710,15 @@ export default function PortalDashboard() {
                                 ) : (
                                     <>
                                         {visibleApps.map((app) => {
-                                            const Icon = app.id === 'POS' ? Store : app.id === 'ADQUISICIONES' ? FileText : app.id === 'LOGISTICA' ? Package : Users;
+                                            const Icon = app.id === 'POS'
+                                                ? Store
+                                                : app.id === 'ADQUISICIONES'
+                                                    ? FileText
+                                                    : app.id === 'FARMACIAS'
+                                                        ? Pill
+                                                        : app.id === 'LOGISTICA'
+                                                            ? Package
+                                                            : Users;
                                             const opener = APP_OPENERS[app.id];
                                             const isAvailable = Boolean(opener);
 
