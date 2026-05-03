@@ -30,9 +30,9 @@ const AVAILABLE_APPS = [
 ];
 
 const APP_OPENERS = {
-    POS: { label: 'Caja POS', url: 'http://localhost:5173/pos' },
-    ADQUISICIONES: { label: 'Adquisiciones', url: 'http://localhost:5174/dashboard-compras' },
-    FARMACIAS: { label: 'Farmacias', url: 'http://localhost:5175' }
+    POS: { label: 'Caja POS', port: 5173, path: '/pos' },
+    ADQUISICIONES: { label: 'Adquisiciones', port: 5174, path: '/dashboard-compras' },
+    FARMACIAS: { label: 'Farmacias', port: 5175, path: '' }
 };
 
 const MODULE_METADATA_TO_ROLE = {
@@ -331,8 +331,9 @@ export default function PortalDashboard() {
 
     const handleOpenPOS = async () => {
         const { data: { session } } = await supabase.auth.getSession();
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         if (session) {
-            const url = `http://localhost:5173/pos#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            const url = `http://${hostname}:5173/pos#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
             window.location.href = url;
         } else {
             window.location.href = '/login';
@@ -341,8 +342,9 @@ export default function PortalDashboard() {
 
     const handleOpenAdquisiciones = async () => {
         const { data: { session } } = await supabase.auth.getSession();
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         if (session) {
-            const url = `http://localhost:5174/dashboard-compras#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            const url = `http://${hostname}:5174/dashboard-compras#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
             window.location.href = url;
         } else {
             window.location.href = '/login';
@@ -351,8 +353,9 @@ export default function PortalDashboard() {
 
     const handleOpenFarmacias = async () => {
         const { data: { session } } = await supabase.auth.getSession();
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         if (session) {
-            const url = `http://localhost:5175#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+            const url = `http://${hostname}:5175#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
             window.location.href = url;
         } else {
             window.location.href = '/login';
