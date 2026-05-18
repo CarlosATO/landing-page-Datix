@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { Building2, User, Mail, Lock, Package, ShoppingCart, CheckCircle2, AlertCircle, Database, ShieldCheck } from "lucide-react";
+import { Building2, User, Mail, Lock, Package, ShoppingCart, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
@@ -79,10 +80,7 @@ export default function RegisterPage() {
 
         <div className="relative z-10">
           <Link href="/" className="flex items-center gap-2 mb-12">
-            <div className="h-9 w-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center">
-              <Database className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-extrabold text-white tracking-tight">Datix</span>
+            <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={110} height={36} className="h-8 w-auto opacity-100 transition-all hover:scale-105" priority />
           </Link>
 
           <h2 className="text-4xl font-extrabold text-white leading-tight mb-4">
@@ -120,18 +118,12 @@ export default function RegisterPage() {
 
           {/* Logo mobile */}
           <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="h-8 w-8 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
-              <Database className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-extrabold text-slate-900">Datix</span>
+            <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={110} height={36} className="h-7 w-auto brightness-0 opacity-90 transition-all" priority />
           </Link>
 
           {/* Logo desktop */}
           <Link href="/" className="hidden lg:flex items-center gap-2 mb-8">
-            <div className="h-8 w-8 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
-              <Database className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-extrabold text-slate-900">Datix</span>
+            <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={110} height={36} className="h-8 w-auto brightness-0 opacity-90 transition-all" priority />
           </Link>
 
           <div className="mb-7">

@@ -134,7 +134,7 @@ export function PortalDashboardView({
           <button className="p-1 hover:bg-white/10 rounded-md transition-colors">
             <LayoutDashboard className="h-6 w-6" />
           </button>
-          <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={96} height={32} className="h-8 w-auto brightness-0 invert opacity-90 transition-all hover:opacity-100" priority />
+          <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={110} height={36} className="h-7 w-auto opacity-90 transition-all hover:opacity-100" priority />
         </div>
 
         <div className="flex items-center gap-2">

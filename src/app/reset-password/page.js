@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -73,10 +74,12 @@ export default function ResetPasswordPage() {
         <div className="flex min-h-screen font-sans text-slate-900 selection:bg-brand-vivid/30 bg-slate-50">
             <div className="flex w-full flex-col items-center justify-center p-8">
                 <div className="mb-10 text-center">
-                    <img
+                    <Image
                         src="/imagen/logo_datix.png"
                         alt="Datix Logo"
-                        className="h-20 w-auto mx-auto mb-8 transition-all hover:scale-105"
+                        width={140} height={46}
+                        className="h-12 w-auto mx-auto mb-8 brightness-0 transition-all hover:scale-105"
+                        priority
                     />
                     <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
                         Establecer nueva contraseña

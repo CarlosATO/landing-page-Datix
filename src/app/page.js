@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, ShieldCheck, BarChart3, ChevronDown, Menu, X, Building2, Package, ShoppingCart, Database, Lock, TrendingDown, Eye, Wrench, Activity, AlertTriangle, Zap, Network, Terminal } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import HeroMockup from "./_components/HeroMockup";
 import ModuleFlow from "./_components/ModuleFlow";
 import DashboardMockup from "./_components/DashboardMockup";
@@ -47,8 +48,7 @@ function Navbar() {
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-lg border-b border-slate-200 shadow-sm" : "bg-transparent"}`}>
         <div className="mx-auto max-w-7xl flex h-[68px] items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2 font-extrabold text-lg text-slate-900">
-            <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center shadow-md"><Database className="h-4 w-4 text-white" /></div>
-            Datix
+            <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={100} height={32} className="h-7 w-auto brightness-0 opacity-90 transition-all" priority />
           </Link>
           <nav className="hidden md:flex gap-7 text-sm font-semibold text-slate-600">
             {[["Módulos","#modulos"],["Seguridad","#seguridad"],["Beneficios","#resultados"],["Recursos","#"]].map(([l,h],i)=>(
@@ -283,8 +283,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
             <div>
               <div className="flex items-center gap-2 font-extrabold text-slate-900 mb-4">
-                <div className="h-7 w-7 rounded-lg bg-violet-600 flex items-center justify-center"><Database className="h-3.5 w-3.5 text-white"/></div>
-                Datix
+                <Image src="/imagen/logo_datix.png" alt="Datix Logo" width={80} height={24} className="h-5 w-auto brightness-0 opacity-80" />
               </div>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">Plataforma modular de control operativo y trazabilidad para constructoras y logística.</p>
             </div>

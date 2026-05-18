@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Mail, ArrowRight, AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -129,10 +130,12 @@ export default function ForgotPasswordPage() {
 
                 <div className="relative z-10 flex flex-col items-center justify-center text-center">
                     <Link href="/">
-                        <img
+                        <Image
                             src="/imagen/logo_datix.png"
                             alt="Datix Logo"
-                            className="h-28 w-auto brightness-0 invert drop-shadow-[0_0_20px_rgba(142,67,217,0.5)] transition-all hover:scale-105"
+                            width={110} height={36}
+                            className="h-9 w-auto drop-shadow-[0_0_20px_rgba(142,67,217,0.5)] transition-all hover:scale-105"
+                            priority
                         />
                     </Link>
                     <h2 className="mt-8 text-3xl font-extrabold leading-tight text-white xl:text-4xl">
