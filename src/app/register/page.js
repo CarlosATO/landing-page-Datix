@@ -4,360 +4,248 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import {
-    Building2,
-    User,
-    Mail,
-    Lock,
-    Store,
-    FileText,
-    Pill,
-    Package,
-    Users as UsersIcon,
-    CheckCircle2,
-    AlertCircle
-} from "lucide-react";
+import { Building2, User, Mail, Lock, Package, ShoppingCart, CheckCircle2, AlertCircle, Database, ShieldCheck } from "lucide-react";
 
-// Inicializa el cliente de Supabase (fuera del componente para evitar re-creación)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
+// Módulos actualizados para Datix (sin POS/Farmacia)
 const MODULE_CATALOG = [
-    { id: "POS", metadataValue: "pos", name: "Caja POS", description: "Ventas y caja para punto de venta.", icon: Store, availableNow: true },
-    { id: "ADQUISICIONES", metadataValue: "adquisiciones", name: "Adquisiciones", description: "Compras, proveedores y órdenes.", icon: FileText, availableNow: true },
-    { id: "FARMACIAS", metadataValue: "farmacias", name: "Farmacias", description: "Gestión farmacéutica y trazabilidad.", icon: Pill, availableNow: true },
-    { id: "LOGISTICA", metadataValue: "logistica", name: "Logística", description: "Despachos y operación logística.", icon: Package, availableNow: false },
-    { id: "RRHH", metadataValue: "rrhh", name: "Recursos Humanos", description: "Gestión de personal y contratos.", icon: UsersIcon, availableNow: false },
+  { id: "LOGISTICA", metadataValue: "logistica", name: "Logística y Pañol", description: "Control de herramientas, bodegas y stock.", icon: Package, availableNow: true },
+  { id: "CONSTRUCCION", metadataValue: "construccion", name: "Construcción", description: "Avances de obra y candado financiero.", icon: Building2, availableNow: true },
+  { id: "ADQUISICIONES", metadataValue: "adquisiciones", name: "Adquisiciones", description: "Órdenes de compra y proveedores.", icon: ShoppingCart, availableNow: true },
 ];
 
-const toUpperValue = (value) => (value ?? "").toString().toUpperCase();
-const toEmailValue = (value) => (value ?? "").toString().trim().toLowerCase();
+const toUpperValue = (v) => (v ?? "").toString().toUpperCase();
+const toEmailValue = (v) => (v ?? "").toString().trim().toLowerCase();
 
 export default function RegisterPage() {
-    const router = useRouter();
+  const router = useRouter();
+  const [formData, setFormData] = useState({ empresa: "", nombre: "", email: "", password: "", trialModule: "LOGISTICA" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-    // Estados del formulario
-    const [formData, setFormData] = useState({
-        empresa: "",
-        nombre: "",
-        email: "",
-        password: "",
-        trialModule: "POS",
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      if (name === "email") return { ...prev, [name]: toEmailValue(value) };
+      if (name === "password" || name === "trialModule") return { ...prev, [name]: value };
+      return { ...prev, [name]: toUpperValue(value) };
     });
+  };
 
-    // Estados de UI
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState(false);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => {
-            if (name === "email") {
-                return { ...prev, [name]: toEmailValue(value) };
-            }
-            if (name === "password" || name === "trialModule") {
-                return { ...prev, [name]: value };
-            }
-            return { ...prev, [name]: toUpperValue(value) };
-        });
-    };
-
-
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
-
-        try {
-            // Paso 1: Crear Usuario Auth en Supabase
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: toEmailValue(formData.email),
-                password: formData.password,
-                options: {
-                    data: {
-                        full_name: toUpperValue(formData.nombre),
-                        empresa_nombre: toUpperValue(formData.empresa),
-                        modulo_inicial: MODULE_CATALOG.find(m => m.id === formData.trialModule)?.metadataValue || "pos"
-                    }
-                }
-            });
-
-            if (authError) throw new Error(authError.message);
-            if (!authData.user) throw new Error("Error desconocido al crear usuario");
-
-            // Si se requiere confirmación de correo electrónico, la sesión será null.
-            if (!authData.session) {
-                setSuccess(true);
-            } else {
-                router.push("/portal");
-            }
-
-        } catch (err) {
-            console.error("Error en el registro:", err);
-
-            // Traducir los errores más comunes de Supabase al español
-            let errorMessage = err.message || "Ocurrió un error inesperado al intentar registrarte.";
-            if (errorMessage.includes("User already registered")) {
-                errorMessage = "Este correo electrónico ya se encuentra registrado. Por favor, inicia sesión.";
-            } else if (errorMessage.includes("Password")) {
-                errorMessage = "La contraseña debe tener al menos 6 caracteres.";
-            } else if (errorMessage.includes("rate limit exceeded")) {
-                errorMessage = "Demasiados intentos seguidos. Por favor, espera un minuto antes de volver a registrarte.";
-            }
-
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: toEmailValue(formData.email),
+        password: formData.password,
+        options: {
+          data: {
+            full_name: toUpperValue(formData.nombre),
+            empresa_nombre: toUpperValue(formData.empresa),
+            modulo_inicial: MODULE_CATALOG.find(m => m.id === formData.trialModule)?.metadataValue || "logistica"
+          }
         }
-    };
+      });
+      if (authError) throw new Error(authError.message);
+      if (!authData.user) throw new Error("Error desconocido al crear usuario");
+      if (!authData.session) { setSuccess(true); } else { router.push("/portal"); }
+    } catch (err) {
+      let msg = err.message || "Ocurrió un error inesperado.";
+      if (msg.includes("User already registered")) msg = "Este correo ya está registrado. Por favor inicia sesión.";
+      else if (msg.includes("Password")) msg = "La contraseña debe tener al menos 6 caracteres.";
+      else if (msg.includes("rate limit exceeded")) msg = "Demasiados intentos. Espera un momento e inténtalo de nuevo.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const inputClass = "w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-slate-900 font-medium placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all";
 
+  return (
+    <div className="flex min-h-screen font-sans bg-white">
 
-    return (
-        <div className="flex min-h-screen font-sans text-white selection:bg-brand-vivid/30">
+      {/* ── LEFT: Branding Panel ── */}
+      <div className="hidden lg:flex w-1/2 flex-col justify-center relative overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-600 to-indigo-700 p-16">
+        <div className="absolute inset-0 opacity-10" style={{backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"28px 28px"}}/>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2"/>
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-indigo-400/30 rounded-full blur-3xl translate-y-1/3 translate-x-1/3"/>
 
-            {/* 1. Lado Izquierdo (Branding / Marketing) */}
-            <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-[linear-gradient(145deg,#F8F6FC_0%,#EEE9F8_52%,#E8DFF5_100%)] p-12 lg:flex xl:p-20">
-                {/* Background Effects */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(142,67,217,0.2),transparent_60%)]"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(76,48,115,0.22),transparent_60%)]"></div>
-
-                {/* Floating orbs */}
-                <div className="absolute top-32 right-20 h-64 w-64 rounded-full bg-brand-vivid/[0.07] blur-3xl animate-float"></div>
-                <div className="absolute bottom-20 left-10 h-48 w-48 rounded-full bg-brand-accent/[0.06] blur-3xl animate-float-slow"></div>
-
-                {/* Grid pattern */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(124,58,237,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(124,58,237,0.08)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
-
-                {/* Logo */}
-                <div className="relative z-10">
-                    <Link href="/">
-                        <img
-                            src="/imagen/logo_datix.png"
-                            alt="Datix Logo"
-                            className="h-28 w-auto drop-shadow-[0_6px_20px_rgba(124,58,237,0.28)] transition-all hover:scale-105"
-                            style={{
-                                filter:
-                                    "brightness(0) saturate(100%) invert(31%) sepia(60%) saturate(1200%) hue-rotate(240deg) brightness(94%) contrast(106%)",
-                            }}
-                        />
-                    </Link>
-                </div>
-
-                {/* Texto Inspirador & Beneficios */}
-                <div className="relative z-10 mt-auto">
-                    <h2 className="mb-8 text-4xl font-extrabold leading-tight text-slate-900 xl:text-5xl">
-                        El primer paso para{" "}
-                        <span className="gradient-text">escalar tu negocio</span>{" "}
-                        de forma inteligente.
-                    </h2>
-
-                    <div className="space-y-5 text-lg text-slate-700">
-                        {[
-                            "Sin tarjeta de crédito.",
-                            "Cancela cuando quieras, sin amarras.",
-                            "Soporte local en Chile y Latinoamérica.",
-                            "Paga solo por lo que usas, crece a tu ritmo.",
-                        ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-green-600" />
-                                <span>{item}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+        <div className="relative z-10">
+          <Link href="/" className="flex items-center gap-2 mb-12">
+            <div className="h-9 w-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center">
+              <Database className="h-5 w-5 text-white" />
             </div>
+            <span className="text-xl font-extrabold text-white tracking-tight">Datix</span>
+          </Link>
 
-            {/* 2. Lado Derecho (Formulario de Registro) */}
-            <div className="flex w-full items-center justify-center bg-white p-8 lg:w-1/2">
-                <div className="w-full max-w-md animate-fade-in-up">
+          <h2 className="text-4xl font-extrabold text-white leading-tight mb-4">
+            El primer paso para escalar tu operación.
+          </h2>
+          <p className="text-violet-200 font-medium text-lg mb-12 leading-relaxed">
+            Sin tarjeta de crédito. Sin compromisos. Empieza con el módulo que más necesitas hoy.
+          </p>
 
-                    {/* Header en Móvil */}
-                    <div className="mb-8 text-center lg:hidden">
-                        <Link href="/">
-                            <img src="/imagen/logo_datix.png" alt="Datix Logo" className="h-16 w-auto mx-auto" />
-                        </Link>
-                    </div>
+          <div className="space-y-4">
+            {[
+              "Sin tarjeta de crédito requerida.",
+              "Cancela cuando quieras.",
+              "Soporte local en Chile y Latinoamérica.",
+              "Paga solo por lo que usas.",
+              "Auditoría total incluida en todos los planes.",
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-violet-300 flex-shrink-0" />
+                <span className="text-violet-100 font-medium text-sm">{item}</span>
+              </div>
+            ))}
+          </div>
 
-                    {/* Títulos */}
-                    <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                            Crea tu Ecosistema
-                        </h1>
-                        <p className="mt-3 text-slate-500">
-                            Comienza tus 14 días de prueba gratis. Sin compromisos.
-                        </p>
-                    </div>
-
-                    {/* Formulario / Mensaje de Éxito */}
-                    {success ? (
-                        <div className="flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-surface-light p-10 text-center shadow-lg animate-scale-in">
-                            <CheckCircle2 className="h-16 w-16 text-green-500" />
-                            <h2 className="text-2xl font-extrabold gradient-text">¡Registro casi listo!</h2>
-                            <p className="text-slate-600">
-                                ¡Revisa tu bandeja de entrada! Te hemos enviado un enlace para confirmar tu correo y activar tu cuenta.
-                            </p>
-                            <Link href="/login" className="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-accent to-brand-vivid px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition-all hover:shadow-xl hover:shadow-violet-900/35 active:scale-[0.98]">
-                                Ir a Iniciar Sesión
-                            </Link>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="space-y-6">
-
-                            <div className="space-y-4">
-                                {/* Input Empresa */}
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Nombre de tu Empresa / Local</label>
-                                    <div className="relative">
-                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                            <Building2 className="h-5 w-5" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            name="empresa"
-                                            value={formData.empresa}
-                                            onChange={handleChange}
-                                            required
-                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
-                                            placeholder="Ej: Minimarket Los Andes"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Input Nombre */}
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Tu Nombre y Apellido</label>
-                                    <div className="relative">
-                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                            <User className="h-5 w-5" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            name="nombre"
-                                            value={formData.nombre}
-                                            onChange={handleChange}
-                                            required
-                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
-                                            placeholder="Ej: Juan Pérez"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Input Email */}
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Correo Electrónico</label>
-                                    <div className="relative">
-                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                            <Mail className="h-5 w-5" />
-                                        </div>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            required
-                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
-                                            placeholder="tu@email.com"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Input Contraseña */}
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Contraseña</label>
-                                    <div className="relative">
-                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                            <Lock className="h-5 w-5" />
-                                        </div>
-                                        <input
-                                            type="password"
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleChange}
-                                            required
-                                            className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-3 text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-brand-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-vivid/20"
-                                            placeholder="••••••••"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">Módulo para tu prueba de 14 días (elige 1)</label>
-                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                        {MODULE_CATALOG.map((module) => {
-                                            const Icon = module.icon;
-                                            const selected = formData.trialModule === module.id;
-                                            return (
-                                                <button
-                                                    key={module.id}
-                                                    type="button"
-                                                    onClick={() => setFormData(prev => ({ ...prev, trialModule: module.id }))}
-                                                    className={`rounded-xl border p-3 text-left transition-all ${selected
-                                                        ? 'border-brand-accent bg-brand-vivid/10 ring-2 ring-brand-vivid/20'
-                                                        : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100/80'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-start gap-2">
-                                                        <div className={`mt-0.5 rounded-md p-1.5 ${selected ? 'bg-brand-vivid/20 text-brand-accent' : 'bg-slate-200 text-slate-500'}`}>
-                                                            <Icon className="h-4 w-4" />
-                                                        </div>
-                                                        <div>
-                                                            <p className={`text-sm font-bold ${selected ? 'text-slate-900' : 'text-slate-700'}`}>{module.name}</p>
-                                                            <p className="mt-0.5 text-xs text-slate-500">{module.description}</p>
-                                                            {!module.availableNow && (
-                                                                <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                                                                    Próximamente
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-
-
-
-                            {/* Error estético */}
-                            {error && (
-                                <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-600 ring-1 ring-inset ring-red-600/20 animate-fade-in-up">
-                                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                                    <p>{error}</p>
-                                </div>
-                            )}
-
-                            {/* Botón Submit */}
-                            <div className="pt-4">
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full rounded-xl bg-gradient-to-r from-brand-accent to-brand-vivid px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition-all hover:shadow-xl hover:shadow-violet-900/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                    {loading ? "Creando ecosistema..." : "Crear mi cuenta"}
-                                </button>
-                            </div>
-
-                            {/* Enlace Login */}
-                            <div className="text-center">
-                                <p className="text-sm text-slate-600">
-                                    ¿Ya tienes cuenta?{" "}
-                                    <Link href="/login" className="font-semibold text-brand-accent hover:text-brand-vivid transition-colors">
-                                        Inicia sesión aquí
-                                    </Link>
-                                </p>
-                            </div>
-
-                        </form>
-                    )}
-
-                </div>
-            </div>
-            {/* 3. Final del Layout */}
+          <div className="mt-10 flex items-center gap-2 text-violet-300 text-xs font-medium">
+            <ShieldCheck className="h-4 w-4" />
+            Aislamiento multi-empresa · Transacciones atómicas · Datos seguros
+          </div>
         </div>
-    );
+      </div>
+
+      {/* ── RIGHT: Form ── */}
+      <div className="flex w-full flex-col justify-center items-center p-8 lg:w-1/2 overflow-y-auto">
+        <div className="w-full max-w-md py-10">
+
+          {/* Logo mobile */}
+          <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="h-8 w-8 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
+              <Database className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-extrabold text-slate-900">Datix</span>
+          </Link>
+
+          {/* Logo desktop */}
+          <Link href="/" className="hidden lg:flex items-center gap-2 mb-8">
+            <div className="h-8 w-8 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
+              <Database className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-extrabold text-slate-900">Datix</span>
+          </Link>
+
+          <div className="mb-7">
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Crea tu cuenta</h1>
+            <p className="text-slate-500 font-medium">14 días gratis. Sin compromisos.</p>
+          </div>
+
+          {success ? (
+            <div className="flex flex-col items-center text-center gap-4 rounded-2xl border border-violet-100 bg-violet-50 p-10">
+              <div className="h-16 w-16 rounded-2xl bg-violet-600 flex items-center justify-center shadow-lg">
+                <CheckCircle2 className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-extrabold text-slate-900">¡Cuenta casi lista!</h2>
+              <p className="text-slate-600 font-medium leading-relaxed">Revisa tu bandeja de entrada. Te enviamos un enlace para confirmar tu correo y activar tu cuenta.</p>
+              <Link href="/login" className="mt-2 w-full rounded-xl bg-violet-600 py-4 text-sm font-bold text-white shadow-lg hover:bg-violet-700 transition-all text-center">
+                Ir a Iniciar Sesión
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Empresa */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Nombre de tu Empresa</label>
+                <div className="relative">
+                  <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input type="text" name="empresa" value={formData.empresa} onChange={handleChange} required placeholder="Ej: Constructora Los Andes" className={inputClass} />
+                </div>
+              </div>
+
+              {/* Nombre */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tu Nombre Completo</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required placeholder="Ej: Juan Pérez" className={inputClass} />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Correo Electrónico</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="tu@empresa.com" className={inputClass} />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Contraseña</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Mínimo 6 caracteres" className={inputClass} />
+                </div>
+              </div>
+
+              {/* Module Selection */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Elige tu módulo de prueba</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {MODULE_CATALOG.map((mod) => {
+                    const Icon = mod.icon;
+                    const selected = formData.trialModule === mod.id;
+                    return (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, trialModule: mod.id }))}
+                        className={`w-full rounded-xl border p-3.5 text-left transition-all flex items-start gap-3 ${
+                          selected
+                            ? "border-violet-500 bg-violet-50 ring-2 ring-violet-500/20"
+                            : "border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300"
+                        }`}
+                      >
+                        <div className={`mt-0.5 rounded-lg p-2 flex-shrink-0 ${selected ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-500"}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${selected ? "text-violet-700" : "text-slate-700"}`}>{mod.name}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 font-medium">{mod.description}</p>
+                        </div>
+                        {selected && <CheckCircle2 className="h-4 w-4 text-violet-600 ml-auto flex-shrink-0 mt-0.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium mt-2">Trazabilidad Total incluida en todos los módulos.</p>
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-100 p-4 text-sm text-red-600">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  <p className="font-medium">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-violet-600 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/30 hover:bg-violet-700 hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {loading ? "Creando tu cuenta..." : "Crear mi cuenta gratis"}
+              </button>
+
+              <p className="text-center text-sm text-slate-500 font-medium">
+                ¿Ya tienes cuenta?{" "}
+                <Link href="/login" className="font-bold text-violet-600 hover:text-violet-700 transition-colors">
+                  Inicia sesión aquí
+                </Link>
+              </p>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
