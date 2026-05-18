@@ -14,6 +14,11 @@ import {
   Check,
   Briefcase,
   Lock,
+  ArrowRight,
+  Building2,
+  ShoppingCart,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { AVAILABLE_APPS, APP_OPENERS, BRAND_PRIMARY } from '../utils/portalConstants';
 
@@ -151,79 +156,180 @@ export function PortalDashboardView({
 
       <main className="flex-1 overflow-y-auto">
         {activeTab === 'apps' ? (
-          <div className="p-8 sm:p-16">
-            <div className="mx-auto max-w-5xl">
-              <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 text-center">
-                {(!company?.rut || !company?.address || !company?.activity) ? (
-                  <div className="col-span-full animate-in fade-in zoom-in duration-500">
-                    <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
-                      <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-8 border-b border-white/5">
-                        <div className="flex items-center gap-4 mb-2">
-                          <div className="p-3 bg-white/10 rounded-2xl"><Briefcase className="h-8 w-8 text-white" /></div>
-                          <div>
-                            <h2 className="text-2xl font-bold text-white">¡Bienvenido a Datix!</h2>
-                            <p className="text-white/60 text-sm">Completa el perfil de tu empresa para habilitar los módulos.</p>
-                          </div>
+          <div className="p-6 sm:p-10">
+            <div className="mx-auto max-w-6xl">
+
+              {/* Onboarding: Empresa incompleta */}
+              {(!company?.rut || !company?.address || !company?.activity) ? (
+                <div className="animate-in fade-in zoom-in duration-500">
+                  <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
+                    <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-8 border-b border-white/5">
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-white/10 rounded-2xl"><Briefcase className="h-8 w-8 text-white" /></div>
+                        <div>
+                          <h2 className="text-2xl font-bold text-white">¡Bienvenido a Datix!</h2>
+                          <p className="text-white/60 text-sm">Completa el perfil de tu empresa para habilitar los módulos.</p>
                         </div>
                       </div>
-
-                      <form onSubmit={handleSaveOnboarding} className="p-8 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-white/40">RUT Empresa *</label>
-                            <input required placeholder="76.xxx.xxx-x" value={onboardingData.rut} onChange={(e) => setOnboardingData({ ...onboardingData, rut: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-white/40">Giro / Actividad *</label>
-                            <input required placeholder="Ej: Retail, Ferretería..." value={onboardingData.activity} onChange={(e) => setOnboardingData({ ...onboardingData, activity: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
-                          </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-white/40">Dirección Comercial *</label>
-                            <input required placeholder="Calle, Número, Ciudad" value={onboardingData.address} onChange={(e) => setOnboardingData({ ...onboardingData, address: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-white/40">Teléfono</label>
-                            <input placeholder="+56 9 ..." value={onboardingData.phone} onChange={(e) => setOnboardingData({ ...onboardingData, phone: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-white/40">Ciudad</label>
-                            <input placeholder="Santiago, Concepción..." value={onboardingData.city} onChange={(e) => setOnboardingData({ ...onboardingData, city: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
-                          </div>
-                        </div>
-
-                        <button type="submit" disabled={isSavingOnboarding} style={{ backgroundColor: BRAND_PRIMARY }} className="w-full mt-4 rounded-2xl px-6 py-4 text-white font-bold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50">
-                          {isSavingOnboarding ? 'Guardando...' : 'Finalizar Configuración e Ingresar'}
-                        </button>
-                      </form>
                     </div>
-                  </div>
-                ) : (
-                  <>
-                    {visibleApps.map((app) => {
-                      const Icon = app.id === 'POS' ? Store : app.id === 'ADQUISICIONES' ? FileText : app.id === 'FARMACIAS' ? Pill : app.id === 'LOGISTICA' ? Package : Users;
-                      const opener = APP_OPENERS[app.id];
-                      const isAvailable = Boolean(opener);
-                      return (
-                        <div key={app.id} className={`group flex flex-col items-center gap-3 ${isAvailable ? '' : 'opacity-50'}`}>
-                          <button onClick={() => handleOpenApp(app.id)} className={`relative flex h-24 w-24 items-center justify-center rounded-2xl ring-1 transition-all ${isAvailable ? 'bg-white/10 shadow-xl ring-white/20 hover:scale-105 hover:bg-white/20 hover:shadow-purple-900/40 active:scale-95' : 'bg-white/5 shadow-inner ring-white/10 cursor-not-allowed'}`}>
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent"></div>
-                            <Icon className={`h-10 w-10 ${isAvailable ? 'text-white opacity-90 group-hover:opacity-100' : 'text-white/40'}`} />
-                          </button>
-                          <span className={`text-sm font-medium ${isAvailable ? 'text-white/90 group-hover:text-white' : 'text-white/50'}`}>{isAvailable ? app.name : `${app.name} (Prox)`}</span>
+                    <form onSubmit={handleSaveOnboarding} className="p-8 space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-white/40">RUT Empresa *</label>
+                          <input required placeholder="76.xxx.xxx-x" value={onboardingData.rut} onChange={(e) => setOnboardingData({ ...onboardingData, rut: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
                         </div>
-                      );
-                    })}
-
-                    {noModuleAccess && (
-                      <div className="col-span-full py-20 text-center animate-in fade-in duration-700">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10"><Lock className="h-8 w-8 text-white/20" /></div>
-                        <h3 className="text-xl font-bold text-white">Sin módulos asignados</h3>
-                        <p className="mt-2 text-white/40 max-w-sm mx-auto">{isPrivilegedUser ? 'Debes asignar al menos un módulo para comenzar la prueba.' : 'Tu cuenta aún no tiene permisos para acceder a módulos. Contacta al administrador de tu empresa para que te asigne un rol.'}</p>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-white/40">Giro / Actividad *</label>
+                          <input required placeholder="Ej: Construcción..." value={onboardingData.activity} onChange={(e) => setOnboardingData({ ...onboardingData, activity: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-white/40">Dirección Comercial *</label>
+                          <input required placeholder="Calle, Número, Ciudad" value={onboardingData.address} onChange={(e) => setOnboardingData({ ...onboardingData, address: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-white/40">Teléfono</label>
+                          <input placeholder="+56 9 ..." value={onboardingData.phone} onChange={(e) => setOnboardingData({ ...onboardingData, phone: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-white/40">Ciudad</label>
+                          <input placeholder="Santiago, Concepción..." value={onboardingData.city} onChange={(e) => setOnboardingData({ ...onboardingData, city: e.target.value.toUpperCase() })} className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" />
+                        </div>
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
+                      <button type="submit" disabled={isSavingOnboarding} style={{ backgroundColor: BRAND_PRIMARY }} className="w-full mt-4 rounded-2xl px-6 py-4 text-white font-bold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50">
+                        {isSavingOnboarding ? 'Guardando...' : 'Finalizar Configuración e Ingresar'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Header de bienvenida */}
+                  <div className="mb-8">
+                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-1">Portal Operacional</p>
+                    <h1 className="text-2xl font-extrabold text-white">{company?.name || 'Mi Empresa'}</h1>
+                    <p className="text-white/50 text-sm mt-1">Selecciona un módulo para comenzar tu sesión de trabajo.</p>
+                  </div>
+
+                  {/* Grid de Módulos en Cards */}
+                  {noModuleAccess ? (
+                    <div className="py-24 text-center animate-in fade-in duration-700">
+                      <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
+                        <Lock className="h-10 w-10 text-white/20" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">Sin módulos asignados</h3>
+                      <p className="text-white/40 max-w-sm mx-auto text-sm">
+                        {isPrivilegedUser
+                          ? 'Asigna al menos un módulo desde la sección de Equipo para comenzar.'
+                          : 'Tu cuenta aún no tiene permisos. Contacta al administrador de tu empresa.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {visibleApps.map((app) => {
+                        const iconMap = { POS: Store, ADQUISICIONES: ShoppingCart, FARMACIAS: Pill, LOGISTICA: Package, RRHH: Users, CONSTRUCCION: Building2 };
+                        const colorMap = {
+                          POS:          { accent: 'from-violet-500/30 to-purple-600/10', iconBg: 'bg-violet-500/20', iconColor: 'text-violet-300', badge: 'bg-violet-500/20 text-violet-300' },
+                          ADQUISICIONES:{ accent: 'from-teal-500/20 to-teal-600/5',    iconBg: 'bg-teal-500/20',    iconColor: 'text-teal-300',    badge: 'bg-teal-500/20 text-teal-300' },
+                          FARMACIAS:    { accent: 'from-pink-500/20 to-pink-600/5',    iconBg: 'bg-pink-500/20',    iconColor: 'text-pink-300',    badge: 'bg-pink-500/20 text-pink-300' },
+                          LOGISTICA:    { accent: 'from-indigo-500/20 to-indigo-600/5',iconBg: 'bg-indigo-500/20', iconColor: 'text-indigo-300', badge: 'bg-indigo-500/20 text-indigo-300' },
+                          RRHH:         { accent: 'from-amber-500/20 to-amber-600/5',  iconBg: 'bg-amber-500/20',  iconColor: 'text-amber-300',  badge: 'bg-amber-500/20 text-amber-300' },
+                          CONSTRUCCION: { accent: 'from-orange-500/20 to-orange-600/5',iconBg: 'bg-orange-500/20',iconColor: 'text-orange-300', badge: 'bg-orange-500/20 text-orange-300' },
+                        };
+                        const descMap = {
+                          POS:          'Gestión de ventas, caja y tickets en punto de venta.',
+                          ADQUISICIONES:'Órdenes de compra, proveedores y control presupuestario.',
+                          FARMACIAS:    'Trazabilidad farmacéutica, stock y dispensación.',
+                          LOGISTICA:    'Control de pañol, bodegas, herramientas y kardex.',
+                          RRHH:         'Gestión de personal, contratos y asistencia.',
+                          CONSTRUCCION: 'Avances de obra, cubicaciones y control de subcontratos.',
+                        };
+                        const featureMap = {
+                          POS:          ['Ventas en tiempo real', 'Cierre de caja', 'Auditoría'],
+                          ADQUISICIONES:['Control de OC', 'Proveedores', 'Trazabilidad'],
+                          FARMACIAS:    ['Stock por lote', 'Recetas', 'Auditoría FEFO'],
+                          LOGISTICA:    ['Kardex', 'Multi-bodega', 'Despacho nominal'],
+                          RRHH:         ['Nómina', 'Contratos', 'Asistencia'],
+                          CONSTRUCCION: ['Avance físico', 'Candado financiero', 'Cubicaciones'],
+                        };
+                        const Icon = iconMap[app.id] || Package;
+                        const colors = colorMap[app.id] || colorMap.LOGISTICA;
+                        const opener = APP_OPENERS[app.id];
+                        const isAvailable = Boolean(opener);
+                        const desc = descMap[app.id] || 'Módulo operacional Datix.';
+                        const features = featureMap[app.id] || [];
+
+                        return (
+                          <div
+                            key={app.id}
+                            className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+                              isAvailable
+                                ? 'border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 hover:shadow-2xl hover:shadow-black/30 cursor-pointer'
+                                : 'border-white/8 bg-white/3 opacity-60 cursor-not-allowed'
+                            }`}
+                            onClick={() => isAvailable && handleOpenApp(app.id)}
+                          >
+                            {/* Accent gradient top */}
+                            <div className={`absolute inset-x-0 top-0 h-32 bg-gradient-to-b ${colors.accent} pointer-events-none`} />
+
+                            <div className="relative p-6">
+                              {/* Header de la card */}
+                              <div className="flex items-start justify-between mb-5">
+                                <div className={`h-14 w-14 rounded-2xl ${colors.iconBg} flex items-center justify-center ring-1 ring-white/10`}>
+                                  <Icon className={`h-7 w-7 ${colors.iconColor}`} />
+                                </div>
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ring-1 ring-white/10 ${
+                                  isAvailable ? colors.badge : 'bg-white/5 text-white/30'
+                                }`}>
+                                  {isAvailable ? (
+                                    <><span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />Activo</>
+                                  ) : (
+                                    'Próximamente'
+                                  )}
+                                </span>
+                              </div>
+
+                              {/* Nombre y descripción */}
+                              <h3 className={`text-lg font-extrabold mb-1.5 ${isAvailable ? 'text-white' : 'text-white/40'}`}>
+                                {app.name}
+                              </h3>
+                              <p className="text-white/50 text-xs font-medium leading-relaxed mb-5">{desc}</p>
+
+                              {/* Features */}
+                              <div className="flex flex-wrap gap-2 mb-6">
+                                {features.map((f, fi) => (
+                                  <span key={fi} className="flex items-center gap-1 text-[10px] font-semibold text-white/40 bg-white/5 border border-white/8 rounded-full px-2.5 py-1">
+                                    <Check className="h-2.5 w-2.5 text-white/30" />{f}
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* CTA */}
+                              {isAvailable ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleOpenApp(app.id); }}
+                                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all ${colors.iconBg} ${colors.iconColor} ring-1 ring-white/10 group-hover:ring-white/20 group-hover:brightness-110`}
+                                >
+                                  Abrir Módulo <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                                </button>
+                              ) : (
+                                <div className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold bg-white/5 text-white/20 ring-1 ring-white/5">
+                                  <Lock className="h-4 w-4" /> No disponible aún
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Footer de trazabilidad */}
+                  <div className="mt-10 flex items-center justify-center gap-2 text-white/20 text-xs font-medium">
+                    <ShieldCheck className="h-4 w-4" />
+                    Trazabilidad total activa · Auditoría perpetua · Aislamiento multi-empresa
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : (
