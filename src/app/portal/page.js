@@ -50,6 +50,35 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
+async function getAuthHeaders() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return null;
+    return {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+    };
+}
+
+async function postJson(url, body, method = 'POST') {
+    const headers = await getAuthHeaders();
+    if (!headers) {
+        throw new Error('No hay sesión activa.');
+    }
+
+    const response = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'No se pudo completar la operación.');
+    }
+
+    return data;
+}
+
 export default function PortalDashboard() {
     const router = useRouter();
 
@@ -100,7 +129,7 @@ export default function PortalDashboard() {
     useEffect(() => {
         const fetchUserData = async () => {
             if (hasFetched.current) return;
-            
+
             // 🔥 NUEVA ARQUITECTURA: Soporte SSO vía Hash en el Portal (Evita parpadeo de Login)
             if (!hasProcessedHash.current && typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
                 hasProcessedHash.current = true;
@@ -122,7 +151,7 @@ export default function PortalDashboard() {
             }
 
             hasFetched.current = true;
-            
+
             setLoading(true);
             try {
                 const { data: { user: currentUser }, error: sessionError } = await supabase.auth.getUser();
@@ -131,6 +160,7 @@ export default function PortalDashboard() {
                     // Si el error es 429 (Rate Limit), no sacamos al usuario, esperamos reintento
                     if (sessionError?.status === 429) {
                         console.warn("Rate limit en Auth, reintentando en 2 segundos...");
+                        hasFetched.current = false;
                         setTimeout(fetchUserData, 2000);
                         return;
                     }
@@ -144,92 +174,52 @@ export default function PortalDashboard() {
                 // 🔥 NUEVA ARQUITECTURA: Extraemos el company_id directamente del JWT (app_metadata)
                 const jwtCompanyId = currentUser.app_metadata?.company_id;
 
-                if (jwtCompanyId) {
-                    // Cargar detalles de la empresa (RLS nos permitirá verla si el ID coincide)
-                    const { data: compData, error: compError } = await supabase
-                        .from("companies")
-                        .select("*")
-                        .single();
-
-                    if (!compError && compData) {
-                        setCompany(compData);
-                        
-                        // Sincronizamos onboarding data con lo que ya tenga la empresa
-                        setOnboardingData({
-                            rut: compData.rut || '',
-                            activity: compData.activity || '',
-                            address: compData.address || '',
-                            city: compData.city || '',
-                            phone: compData.phone || '',
-                            fantasy_name: compData.fantasy_name || ''
-                        });
-
-                        // 🔥 NUEVA ARQUITECTURA: Extraemos Rol y Plan directamente del JWT
-                        // Ya no necesitamos hacer el select a 'company_users' para el rol
-                        const role = currentUser.app_metadata?.role || 'MEMBER';
-                        setUserRole(role);
-                        setUserAppAccess(currentUser.app_metadata?.module_roles || {});
-
-                        // Cargar settings del usuario como módulo_roles y must_change_password
-                        const { data: myUserRel } = await supabase
-                            .from('company_users')
-                            .select('id, module_roles, must_change_password, full_name, email')
-                            .eq('user_id', currentUser.id)
-                            .eq('company_id', jwtCompanyId)
-                            .single();
-
-                        let effectiveModuleRoles = myUserRel?.module_roles || currentUser.app_metadata?.module_roles || {};
-
-                        // Auto-repair: si el usuario nuevo quedó sin módulos, intentamos inferir desde user_metadata.modulo_inicial
-                        if (Object.keys(effectiveModuleRoles).length === 0) {
-                            const inferred = MODULE_METADATA_TO_ROLE[currentUser.user_metadata?.modulo_inicial];
-                            if (inferred && myUserRel?.id) {
-                                const { error: repairError } = await supabase
-                                    .from('company_users')
-                                    .update({ module_roles: inferred })
-                                    .eq('id', myUserRel.id);
-                                if (!repairError) {
-                                    effectiveModuleRoles = inferred;
-                                }
-                            }
-                        }
-                        
-                        // AUTO-HEALING: El trigger de DB original no graba nombre ni correo para el Dueño.
-                        // Reparamos este registro en tiempo real de forma silenciosa la primera vez.
-                        if (role === 'OWNER' && myUserRel && (!myUserRel.full_name || !myUserRel.email)) {
-                            const nameFromAuth = currentUser.user_metadata?.full_name || 'Dueño Registrado';
-                            const emailFromAuth = currentUser.email;
-                            await supabase
-                                .from('company_users')
-                                .update({ full_name: nameFromAuth, email: emailFromAuth })
-                                .eq('id', myUserRel.id);
-                        }
-                        
-                        // Los dueños NUNCA deben cambiar obligatoriamente su contraseña por esta vía.
-                        if (role !== 'OWNER' && myUserRel?.must_change_password) {
-                            setNeedsPasswordChange(true);
-                        }
-
-                        // Si es Owner o Manager, cargar equipo
-                        if (role === 'OWNER' || role === 'MANAGER') {
-                            const { data: teamData } = await supabase
-                                .from('company_users')
-                                .select('*');
-                            if (teamData) setTeamMembers(teamData);
-                        }
-                        setUserAppAccess(effectiveModuleRoles);
-                    } else {
-                        console.error("No se pudo cargar la configuración de la empresa vinculada al JWT.");
-                    }
-                } else {
+                if (!jwtCompanyId) {
                     console.warn("El token del usuario no tiene un company_id asignado.");
-                    // Fallback: Si no hay company_id, intentamos ver si tiene una empresa creada por él
-                    const { data: fallbackComp } = await supabase
-                        .from("companies")
-                        .select("*")
-                        .limit(1)
-                        .single();
-                    if (fallbackComp) setCompany(fallbackComp);
+                    router.push('/login');
+                    return;
+                }
+
+                const { data: compData, error: compError } = await supabase
+                    .from("companies")
+                    .select("*")
+                    .eq("id", jwtCompanyId)
+                    .single();
+
+                if (compError || !compData) {
+                    console.error("No se pudo cargar la configuración de la empresa vinculada al JWT.");
+                    router.push('/login');
+                    return;
+                }
+
+                setCompany(compData);
+
+                setOnboardingData({
+                    rut: compData.rut || '',
+                    activity: compData.activity || '',
+                    address: compData.address || '',
+                    city: compData.city || '',
+                    phone: compData.phone || '',
+                    fantasy_name: compData.fantasy_name || ''
+                });
+
+                const role = currentUser.app_metadata?.role || 'MEMBER';
+                setUserRole(role);
+
+                const repairData = await postJson('/api/company/repair-roles', { companyId: jwtCompanyId });
+                const effectiveModuleRoles = repairData.membership?.module_roles || currentUser.app_metadata?.module_roles || {};
+                setUserAppAccess(effectiveModuleRoles);
+
+                if (repairData.membership?.must_change_password && role !== 'OWNER') {
+                    setNeedsPasswordChange(true);
+                }
+
+                if (role === 'OWNER' || role === 'MANAGER') {
+                    const { data: teamData } = await supabase
+                        .from('company_users')
+                        .select('*')
+                        .eq('company_id', jwtCompanyId);
+                    if (teamData) setTeamMembers(teamData);
                 }
             } catch (err) {
                 console.error("Error al cargar datos:", err);
@@ -266,13 +256,10 @@ export default function PortalDashboard() {
             });
             if (authError) throw authError;
 
-            // Actualizar bandera relacional
-            const { error: dbError } = await supabase
-                .from('company_users')
-                .update({ must_change_password: false })
-                .eq('user_id', user.id)
-                .eq('company_id', company.id);
-            if (dbError) throw dbError;
+            await postJson('/api/profile/update', {
+                companyId: company.id,
+                updates: { must_change_password: false }
+            }, 'PATCH');
 
             alert("Contraseña actualizada con éxito.");
             setNeedsPasswordChange(false);
@@ -296,23 +283,15 @@ export default function PortalDashboard() {
                 phone: toUpperValue(onboardingData.phone),
                 fantasy_name: toUpperValue(onboardingData.fantasy_name) || toUpperValue(company.name)
             };
-            const { error } = await supabase
-                .from('companies')
-                .update({
-                    rut: normalizedOnboarding.rut,
-                    activity: normalizedOnboarding.activity,
-                    address: normalizedOnboarding.address,
-                    city: normalizedOnboarding.city,
-                    phone: normalizedOnboarding.phone,
-                    fantasy_name: normalizedOnboarding.fantasy_name
-                })
-                .eq('id', company.id);
+            const { company: updatedCompany } = await postJson('/api/company/update', {
+                companyId: company.id,
+                data: normalizedOnboarding
+            });
 
-            if (error) throw error;
-             
             // Actualizamos la empresa en el estado local para desbloquear instantáneamente la UI
             setCompany(prev => ({
                 ...prev,
+                ...updatedCompany,
                 rut: normalizedOnboarding.rut,
                 activity: normalizedOnboarding.activity,
                 address: normalizedOnboarding.address,
@@ -390,9 +369,9 @@ export default function PortalDashboard() {
 
     const handleEditUser = (member) => {
         setEditingUserId(member.user_id);
-        setInviteEmail(member.email || ''); 
+        setInviteEmail(member.email || '');
         setInviteName(member.full_name || '');
-        setInvitePassword(''); 
+        setInvitePassword('');
         setInviteRole(member.role || 'MEMBER');
         setModuleRoles(member.module_roles || {});
         setTeamViewMode('form');
@@ -404,17 +383,13 @@ export default function PortalDashboard() {
         try {
             if (editingUserId) {
                 // MODO EDICIÓN: Actualizar company_users
-                const { error: updateError } = await supabase
-                    .from('company_users')
-                    .update({
-                        full_name: inviteName,
-                        role: inviteRole,
-                        module_roles: moduleRoles
-                    })
-                    .eq('user_id', editingUserId)
-                    .eq('company_id', company.id);
-                
-                if (updateError) throw new Error(updateError.message);
+                await postJson('/api/team/invite', {
+                    companyId: company.id,
+                    userId: editingUserId,
+                    fullName: inviteName,
+                    globalRole: inviteRole,
+                    moduleRoles: moduleRoles
+                }, 'PATCH');
                 alert("Usuario actualizado con éxito!");
             } else {
                 // MODO CREACIÓN: Llamar API de Invitación Admin
@@ -427,21 +402,15 @@ export default function PortalDashboard() {
                     moduleRoles: moduleRoles
                 };
 
-                const res = await fetch('/api/team/invite', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
+                await postJson('/api/team/invite', payload);
                 alert("Usuario invitado con éxito!");
             }
 
             // Recargar lista
             const { data: teamData } = await supabase
                 .from('company_users')
-                .select('*');
+                .select('*')
+                .eq('company_id', company.id);
             if (teamData) setTeamMembers(teamData);
 
             setTeamViewMode('list');
@@ -467,12 +436,7 @@ export default function PortalDashboard() {
 
         setIsBillingLoading(true);
         try {
-            const response = await fetch('/api/stripe/portal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyId: company.id })
-            });
-            const data = await response.json();
+            const data = await postJson('/api/stripe/portal', { companyId: company.id });
 
             if (data.url) {
                 window.location.href = data.url;
@@ -516,7 +480,7 @@ export default function PortalDashboard() {
                     <form onSubmit={handleChangePassword} className="space-y-4">
                         <div className="space-y-1 text-left">
                             <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Nueva Contraseña</label>
-                            <input 
+                            <input
                                 type="password"
                                 required
                                 value={newPassword}
@@ -527,7 +491,7 @@ export default function PortalDashboard() {
                         </div>
                         <div className="space-y-1 text-left">
                             <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Confirmar Nueva Contraseña</label>
-                            <input 
+                            <input
                                 type="password"
                                 required
                                 value={confirmPassword}
@@ -538,7 +502,7 @@ export default function PortalDashboard() {
                         </div>
 
                         <div className="pt-4">
-                            <button 
+                            <button
                                 type="submit"
                                 disabled={isChangingPassword}
                                 style={{ backgroundColor: BRAND_PRIMARY }}
@@ -567,7 +531,7 @@ export default function PortalDashboard() {
         <div className="flex flex-col h-screen font-sans" style={{ backgroundColor: '#45316D' }}>
             {/* Navbar Superior (Estilo Odoo/ERP) */}
             <nav className="flex h-12 w-full items-center justify-between px-4 text-white shadow-lg" style={{ backgroundColor: '#5B4385' }}>
-                <div 
+                <div
                     className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => setActiveTab('apps')}
                 >
@@ -584,21 +548,21 @@ export default function PortalDashboard() {
                 <div className="flex items-center gap-2">
                     {(userRole === 'OWNER' || userRole === 'MANAGER') && (
                         <>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('team')}
                                 title="Gestión de Equipo"
                                 className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'team' ? 'bg-white/20' : ''}`}
                             >
                                 <Users className="h-5 w-5" />
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('billing')}
                                 title="Facturación"
                                 className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'billing' ? 'bg-white/20' : ''}`}
                             >
                                 <CreditCard className="h-5 w-5" />
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('settings')}
                                 title="Configuración"
                                 className={`p-2 hover:bg-white/10 rounded-md transition-colors ${activeTab === 'settings' ? 'bg-white/20' : ''}`}
@@ -607,7 +571,7 @@ export default function PortalDashboard() {
                             </button>
                         </>
                     )}
-                    
+
                     <div className="h-6 w-px bg-white/20 mx-2"></div>
 
                     <div className="flex items-center gap-3">
@@ -630,7 +594,7 @@ export default function PortalDashboard() {
                     <div className="p-8 sm:p-16">
                         <div className="mx-auto max-w-5xl">
                             <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 text-center">
-                                
+
                                 {/* Onboarding Check: Si faltan datos clave, bloqueamos las Apps */}
                                 {(!company?.rut || !company?.address || !company?.activity) ? (
                                     <div className="col-span-full animate-in fade-in zoom-in duration-500">
@@ -651,55 +615,55 @@ export default function PortalDashboard() {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold uppercase tracking-widest text-white/40">RUT Empresa *</label>
-                                                        <input 
+                                                        <input
                                                             required
                                                             placeholder="76.xxx.xxx-x"
                                                             value={onboardingData.rut}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, rut: toUpperValue(e.target.value)})}
+                                                            onChange={(e) => setOnboardingData({ ...onboardingData, rut: toUpperValue(e.target.value) })}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold uppercase tracking-widest text-white/40">Giro / Actividad *</label>
-                                                        <input 
+                                                        <input
                                                             required
                                                             placeholder="Ej: Retail, Ferretería..."
                                                             value={onboardingData.activity}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, activity: toUpperValue(e.target.value)})}
+                                                            onChange={(e) => setOnboardingData({ ...onboardingData, activity: toUpperValue(e.target.value) })}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
                                                     <div className="space-y-2 md:col-span-2">
                                                         <label className="text-xs font-bold uppercase tracking-widest text-white/40">Dirección Comercial *</label>
-                                                        <input 
+                                                        <input
                                                             required
                                                             placeholder="Calle, Número, Ciudad"
                                                             value={onboardingData.address}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, address: toUpperValue(e.target.value)})}
+                                                            onChange={(e) => setOnboardingData({ ...onboardingData, address: toUpperValue(e.target.value) })}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold uppercase tracking-widest text-white/40">Teléfono</label>
-                                                        <input 
+                                                        <input
                                                             placeholder="+56 9 ..."
                                                             value={onboardingData.phone}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, phone: toUpperValue(e.target.value)})}
+                                                            onChange={(e) => setOnboardingData({ ...onboardingData, phone: toUpperValue(e.target.value) })}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold uppercase tracking-widest text-white/40">Ciudad</label>
-                                                        <input 
+                                                        <input
                                                             placeholder="Santiago, Concepción..."
                                                             value={onboardingData.city}
-                                                            onChange={(e) => setOnboardingData({...onboardingData, city: toUpperValue(e.target.value)})}
+                                                            onChange={(e) => setOnboardingData({ ...onboardingData, city: toUpperValue(e.target.value) })}
                                                             className="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <button 
+                                                <button
                                                     type="submit"
                                                     disabled={isSavingOnboarding}
                                                     style={{ backgroundColor: BRAND_PRIMARY }}
@@ -787,7 +751,7 @@ export default function PortalDashboard() {
                 <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <nav className="flex items-center gap-2 text-sm text-white/50 mb-1">
-                            <button 
+                            <button
                                 onClick={() => {
                                     setEditingUserId(null);
                                     setTeamViewMode('list');
@@ -807,7 +771,7 @@ export default function PortalDashboard() {
                             {teamViewMode === 'list' ? 'Mi Equipo' : (editingUserId ? 'Editar Colaborador' : 'Nuevo Colaborador')}
                         </h1>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                         {teamViewMode === 'list' ? (
                             <>
@@ -866,8 +830,8 @@ export default function PortalDashboard() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 text-white">
-                                {teamMembers.map((member, idx) => (
-                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                        {teamMembers.map((member) => (
+                                    <tr key={member.user_id || member.id} className="hover:bg-white/5 transition-colors">
                                         <td className="px-6 py-4 font-medium">{member.full_name || 'Desconocido'}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${member.role === 'OWNER' ? 'bg-white/20 text-white ring-white/30' :
@@ -880,8 +844,8 @@ export default function PortalDashboard() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 {member.module_roles && Object.entries(member.module_roles).map(([appId, role]) => (
-                                                    <span 
-                                                        key={appId} 
+                                                    <span
+                                                        key={appId}
                                                         className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset uppercase tracking-wider bg-white/10 text-white/70 border border-white/5"
                                                     >
                                                         {appId}: {role}
@@ -891,7 +855,7 @@ export default function PortalDashboard() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button 
+                                            <button
                                                 onClick={() => handleEditUser(member)}
                                                 className="text-white/50 hover:text-white font-medium transition-colors focus:outline-none"
                                             >
@@ -973,7 +937,7 @@ export default function PortalDashboard() {
                                                     onClick={() => handleToggleModule(app.id, app.roles[0].v)}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div 
+                                                        <div
                                                             className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${moduleRoles[app.id] ? 'bg-white text-[#45316D] border-white' : 'border-white/20 bg-transparent'}`}
                                                         >
                                                             {moduleRoles[app.id] && <Check className="h-2.5 w-2.5 stroke-[3px]" />}
@@ -1040,7 +1004,7 @@ export default function PortalDashboard() {
                         <div className="p-6">
                             <h3 className="text-sm font-semibold text-white mb-1">Historial de Facturación</h3>
                             <p className="text-sm text-white/50 mb-6">Tus últimos pagos realizados.</p>
-                            
+
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-white/5 text-white/40 border-b border-white/5">
@@ -1062,8 +1026,8 @@ export default function PortalDashboard() {
                         </div>
                     </section>
 
-                    <button 
-                        onClick={handleManageBilling} 
+                    <button
+                        onClick={handleManageBilling}
                         disabled={isBillingLoading}
                         style={{ backgroundColor: BRAND_PRIMARY }}
                         className="w-full rounded-xl px-6 py-3 text-white font-bold shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50"
