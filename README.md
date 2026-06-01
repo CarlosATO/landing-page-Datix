@@ -2,6 +2,12 @@
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## Supabase Migrations
+
+- The real migration history must stay physically in `supabase/migrations/`.
+- The documentation under `docs/` only classifies migrations by domain.
+- Do not move or rename applied migration files just to improve readability.
+
 ## Getting Started
 
 First, run the development server:

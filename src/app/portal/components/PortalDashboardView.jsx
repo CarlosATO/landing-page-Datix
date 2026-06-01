@@ -20,7 +20,7 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react';
-import { AVAILABLE_APPS, APP_OPENERS, BRAND_PRIMARY } from '../utils/portalConstants';
+import { AVAILABLE_APPS, BRAND_PRIMARY, getPortalModuleState } from '../utils/portalConstants';
 
 export function PortalDashboardView({
   user,
@@ -31,6 +31,7 @@ export function PortalDashboardView({
   setActiveTab,
   userRole,
   teamMembers,
+  companyModules,
   isSavingOnboarding,
   onboardingData,
   setOnboardingData,
@@ -55,7 +56,6 @@ export function PortalDashboardView({
   confirmPassword,
   setConfirmPassword,
   isChangingPassword,
-  userAppAccess,
   handleLogout,
   handleChangePassword,
   handleSaveOnboarding,
@@ -123,9 +123,33 @@ export function PortalDashboardView({
   }
 
   const isPrivilegedUser = userRole === 'OWNER' || userRole === 'MANAGER';
-  const enabledAppIds = new Set(Object.entries(userAppAccess || {}).filter(([, role]) => Boolean(role)).map(([appId]) => appId));
-  const visibleApps = AVAILABLE_APPS.filter((app) => enabledAppIds.has(app.id));
-  const noModuleAccess = visibleApps.length === 0;
+
+  // contractedApps = ONLY what company_modules reports as active|trial
+  // We do NOT compute upsell — per business rule, portal shows only contracted modules.
+  const portalApps = AVAILABLE_APPS.map((app) => ({
+    ...app,
+    state: getPortalModuleState(companyModules || [], app.id),
+  }));
+  const contractedApps = portalApps.filter((app) => app.state.contracted);
+  const hasContractedApps = contractedApps.length > 0;
+
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    console.debug('[portal render states]', {
+      company_id: company?.id,
+      company_name: company?.name,
+      module_states: portalApps.map((app) => ({
+        app_id: app.id,
+        module_key: app.state.moduleKey,
+        status: app.state.status,
+        contracted: app.state.contracted,
+        enabled: app.state.available,
+        locked: !app.state.available,
+        comingSoon: app.state.comingSoon,
+        openUrl: app.state.openUrl,
+        reason: app.state.blockedReason,
+      })),
+    });
+  }
 
   return (
     <div className="flex flex-col h-screen font-sans" style={{ backgroundColor: '#45316D' }}>
@@ -211,21 +235,30 @@ export function PortalDashboardView({
                   </div>
 
                   {/* Grid de Módulos en Cards */}
-                  {noModuleAccess ? (
-                    <div className="py-24 text-center animate-in fade-in duration-700">
-                      <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
-                        <Lock className="h-10 w-10 text-white/20" />
+                  <section className="mb-8">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-lg font-extrabold text-white">Mis módulos</h2>
+                        <p className="text-xs font-medium uppercase tracking-widest text-white/35">Solo contratos activos o trial</p>
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">Sin módulos asignados</h3>
-                      <p className="text-white/40 max-w-sm mx-auto text-sm">
-                        {isPrivilegedUser
-                          ? 'Asigna al menos un módulo desde la sección de Equipo para comenzar.'
-                          : 'Tu cuenta aún no tiene permisos. Contacta al administrador de tu empresa.'}
-                      </p>
+                      <div className="text-xs font-semibold uppercase tracking-widest text-white/35">{contractedApps.length} encontrados</div>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {visibleApps.map((app) => {
+
+                    {!hasContractedApps ? (
+                      <div className="py-16 text-center animate-in fade-in duration-700 rounded-2xl border border-white/10 bg-white/5">
+                        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
+                          <Lock className="h-10 w-10 text-white/20" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Sin módulos contratados</h3>
+                        <p className="text-white/40 max-w-sm mx-auto text-sm">
+                          {isPrivilegedUser
+                            ? 'Activa al menos un módulo en company_modules para comenzar.'
+                            : 'Tu empresa aún no tiene módulos habilitados. Contacta al administrador.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {contractedApps.map((app) => {
                         const iconMap = { POS: Store, ADQUISICIONES: ShoppingCart, FARMACIAS: Pill, LOGISTICA: Package, RRHH: Users, CONSTRUCCION: Building2 };
                         const colorMap = {
                           POS:          { accent: 'from-violet-500/30 to-purple-600/10', iconBg: 'bg-violet-500/20', iconColor: 'text-violet-300', badge: 'bg-violet-500/20 text-violet-300' },
@@ -253,8 +286,12 @@ export function PortalDashboardView({
                         };
                         const Icon = iconMap[app.id] || Package;
                         const colors = colorMap[app.id] || colorMap.LOGISTICA;
-                        const opener = APP_OPENERS[app.id];
-                        const isAvailable = Boolean(opener);
+                        const { available, contractedButPreparing, blockedReason } = app.state;
+                        const statusLabel = available
+                          ? 'Activo'
+                          : contractedButPreparing
+                            ? 'En preparación'
+                            : 'Bloqueado';
                         const desc = descMap[app.id] || 'Módulo operacional Datix.';
                         const features = featureMap[app.id] || [];
 
@@ -262,11 +299,11 @@ export function PortalDashboardView({
                           <div
                             key={app.id}
                             className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 ${
-                              isAvailable
+                              available
                                 ? 'border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 hover:shadow-2xl hover:shadow-black/30 cursor-pointer'
-                                : 'border-white/8 bg-white/3 opacity-60 cursor-not-allowed'
+                                : 'border-white/8 bg-white/3 opacity-65 cursor-not-allowed'
                             }`}
-                            onClick={() => isAvailable && handleOpenApp(app.id)}
+                            onClick={() => available && handleOpenApp(app.id)}
                           >
                             {/* Accent gradient top */}
                             <div className={`absolute inset-x-0 top-0 h-32 bg-gradient-to-b ${colors.accent} pointer-events-none`} />
@@ -278,21 +315,24 @@ export function PortalDashboardView({
                                   <Icon className={`h-7 w-7 ${colors.iconColor}`} />
                                 </div>
                                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ring-1 ring-white/10 ${
-                                  isAvailable ? colors.badge : 'bg-white/5 text-white/30'
+                                  available ? colors.badge : 'bg-white/5 text-white/30'
                                 }`}>
-                                  {isAvailable ? (
+                                  {available ? (
                                     <><span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />Activo</>
                                   ) : (
-                                    'Próximamente'
+                                    statusLabel
                                   )}
                                 </span>
                               </div>
 
                               {/* Nombre y descripción */}
-                              <h3 className={`text-lg font-extrabold mb-1.5 ${isAvailable ? 'text-white' : 'text-white/40'}`}>
+                              <h3 className={`text-lg font-extrabold mb-1.5 ${available ? 'text-white' : 'text-white/40'}`}>
                                 {app.name}
                               </h3>
-                              <p className="text-white/50 text-xs font-medium leading-relaxed mb-5">{desc}</p>
+                              <p className="text-white/50 text-xs font-medium leading-relaxed mb-2">{desc}</p>
+                              <p className="text-white/35 text-[11px] font-semibold uppercase tracking-widest mb-5">
+                                {available ? 'Contratado y habilitado' : blockedReason}
+                              </p>
 
                               {/* Features */}
                               <div className="flex flex-wrap gap-2 mb-6">
@@ -304,7 +344,7 @@ export function PortalDashboardView({
                               </div>
 
                               {/* CTA */}
-                              {isAvailable ? (
+                              {available ? (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenApp(app.id); }}
                                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all ${colors.iconBg} ${colors.iconColor} ring-1 ring-white/10 group-hover:ring-white/20 group-hover:brightness-110`}
@@ -313,15 +353,16 @@ export function PortalDashboardView({
                                 </button>
                               ) : (
                                 <div className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold bg-white/5 text-white/20 ring-1 ring-white/5">
-                                  <Lock className="h-4 w-4" /> No disponible aún
+                                  <Lock className="h-4 w-4" /> {statusLabel}
                                 </div>
                               )}
                             </div>
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
+                        })}
+                      </div>
+                    )}
+                  </section>
 
                   {/* Footer de trazabilidad */}
                   <div className="mt-10 flex items-center justify-center gap-2 text-white/20 text-xs font-medium">

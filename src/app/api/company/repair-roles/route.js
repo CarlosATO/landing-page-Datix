@@ -6,6 +6,7 @@ const MODULE_METADATA_TO_ROLE = {
   adquisiciones: { ADQUISICIONES: "MANAGER" },
   farmacias: { FARMACIAS: "PHARMACIST" },
   logistica: { LOGISTICA: "MANAGER" },
+  construccion: { CONSTRUCCION: "MANAGER" },
   rrhh: { RRHH: "ADMIN" },
 };
 
@@ -20,7 +21,13 @@ export async function POST(request) {
     }
 
     const updates = {};
-    const inferred = MODULE_METADATA_TO_ROLE[context.user.user_metadata?.modulo_inicial];
+    const initialModuleKey = String(
+      context.user.user_metadata?.selected_module
+      || context.user.user_metadata?.module_key
+      || context.user.user_metadata?.modulo_inicial
+      || 'logistica'
+    ).toLowerCase();
+    const inferred = MODULE_METADATA_TO_ROLE[initialModuleKey];
     const moduleRoles = context.membership.module_roles || {};
 
     if (Object.keys(moduleRoles).length === 0 && inferred) {

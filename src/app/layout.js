@@ -31,6 +31,9 @@ export const metadata = {
       "Controla tu inventario, agiliza tus ventas y gestiona tus compras en un solo lugar.",
     type: "website",
   },
+  icons: {
+    icon: "/datix-favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }) {

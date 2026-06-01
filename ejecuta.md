@@ -10,3 +10,5 @@ export PATH="$HOME/.local/share/fnm/node-versions/v24.15.0/installation/bin:$PAT
 Farmacia
 export PATH="$HOME/.local/share/fnm/node-versions/v24.15.0/installation/bin:$PATH" && cd "/Users/carlosalegria/Desktop/Proyecto Datix Spa/farmacia_saas" && npm run dev
 
+Logistica
+export PATH="$HOME/.local/share/fnm/node-versions/v24.15.0/installation/bin:$PATH" && cd "/Users/carlosalegria/Desktop/Proyecto Datix Spa/logistica_SaaS" && npm run dev

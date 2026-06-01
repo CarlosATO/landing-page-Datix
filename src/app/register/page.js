@@ -27,6 +27,9 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const selectedModule = MODULE_CATALOG.find((m) => m.id === formData.trialModule) || MODULE_CATALOG[0];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,17 +45,32 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
     try {
+      const selectedModuleKey = selectedModule?.metadataValue || "logistica";
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: toEmailValue(formData.email),
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             full_name: toUpperValue(formData.nombre),
             empresa_nombre: toUpperValue(formData.empresa),
-            modulo_inicial: MODULE_CATALOG.find(m => m.id === formData.trialModule)?.metadataValue || "logistica"
+            modulo_inicial: selectedModuleKey,
+            selected_module: selectedModuleKey,
+            module_key: selectedModuleKey,
           }
         }
       });
+
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[register] signUp response", {
+          userId: authData?.user?.id || null,
+          userEmail: authData?.user?.email || null,
+          identities: authData?.user?.identities || null,
+          session: authData?.session || null,
+          error: authError?.message || null,
+        });
+      }
+
       if (authError) throw new Error(authError.message);
       if (!authData.user) throw new Error("Error desconocido al crear usuario");
       if (!authData.session) { setSuccess(true); } else { router.push("/portal"); }
@@ -64,6 +82,28 @@ export default function RegisterPage() {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    setResendLoading(true);
+    setError("");
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: toEmailValue(formData.email),
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+
+      if (resendError) throw resendError;
+      setSuccess(true);
+    } catch (err) {
+      setError(err.message || "No se pudo reenviar la confirmación.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -138,6 +178,7 @@ export default function RegisterPage() {
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900">¡Cuenta casi lista!</h2>
               <p className="text-slate-600 font-medium leading-relaxed">Revisa tu bandeja de entrada. Te enviamos un enlace para confirmar tu correo y activar tu cuenta.</p>
+              <p className="text-xs text-slate-500">Si no llega en unos minutos, revisa spam o vuelve a pedir el correo desde esta misma pantalla.</p>
               <Link href="/login" className="mt-2 w-full rounded-xl bg-violet-600 py-4 text-sm font-bold text-white shadow-lg hover:bg-violet-700 transition-all text-center">
                 Ir a Iniciar Sesión
               </Link>
@@ -210,7 +251,7 @@ export default function RegisterPage() {
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium mt-2">Trazabilidad Total incluida en todos los módulos.</p>
+                <p className="text-[11px] text-slate-400 font-medium mt-2">Trazabilidad Total incluida como capacidad transversal, no como módulo independiente.</p>
               </div>
 
               {error && (
@@ -218,6 +259,17 @@ export default function RegisterPage() {
                   <AlertCircle className="h-5 w-5 flex-shrink-0" />
                   <p className="font-medium">{error}</p>
                 </div>
+              )}
+
+              {error.includes("ya está registrado") && (
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendLoading}
+                  className="w-full rounded-xl border border-violet-200 bg-violet-50 py-3 text-sm font-bold text-violet-700 hover:bg-violet-100 transition-all disabled:opacity-70"
+                >
+                  {resendLoading ? "Reenviando confirmación..." : "Reenviar correo de confirmación"}
+                </button>
               )}
 
               <button

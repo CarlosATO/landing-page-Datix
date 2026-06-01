@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { createPortalApi } from '../services/portalApi';
-import { toUpperValue } from '../utils/portalConstants';
+import { AVAILABLE_APPS, getPortalModuleState, toUpperValue } from '../utils/portalConstants';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
@@ -16,11 +16,14 @@ export function usePortalDashboard() {
 
   const [user, setUser] = useState(null);
   const [company, setCompany] = useState(null);
+  const [companyId, setCompanyId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('apps');
   const [userRole, setUserRole] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [companyModules, setCompanyModules] = useState([]);
+  const [contractedCompanyModules, setContractedCompanyModules] = useState([]);
   const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
   const [onboardingData, setOnboardingData] = useState({ rut: '', activity: '', address: '', city: '', phone: '', fantasy_name: '' });
   const [teamViewMode, setTeamViewMode] = useState('list');
@@ -37,10 +40,42 @@ export function usePortalDashboard() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [userAppAccess, setUserAppAccess] = useState({});
 
-  const visibleApps = useMemo(
-    () => Object.entries(userAppAccess || {}).filter(([, role]) => Boolean(role)).map(([appId]) => appId),
-    [userAppAccess]
-  );
+  const visibleApps = useMemo(() => {
+    if (!contractedCompanyModules || !contractedCompanyModules.length) return [];
+    
+    // Determine which apps from AVAILABLE_APPS are contracted.
+    // An app is visible in "Mis módulos" if its module_key matches a contracted module.
+    return AVAILABLE_APPS.filter((app) => {
+      const appModuleKey = app.moduleKey || app.id.toLowerCase();
+      // Farmacias exception mapping if needed, or exact match
+      const matchingContract = contractedCompanyModules.find(m => 
+        m.module_key_normalized === appModuleKey ||
+        (appModuleKey === 'farmacias' && (m.module_key_normalized === 'farmacia' || m.module_key_normalized === 'pharmacy'))
+      );
+      
+      if (!matchingContract) return false;
+      
+      // Also verify if the user has access via userAppAccess?
+      // User says: "No usar `userAppAccess` para decidir contratación." 
+      // User also says: "En “Mis módulos” debe aparecer SOLO lo contratado/habilitado por esa empresa."
+      // Let's just return true if it's contracted. We'll enforce user-level access upon entry or handle it differently if needed,
+      // but "Mis módulos" represents company's active modules.
+      return true;
+    });
+  }, [contractedCompanyModules]);
+
+  const upsellApps = useMemo(() => {
+    if (!contractedCompanyModules) return AVAILABLE_APPS;
+    
+    return AVAILABLE_APPS.filter((app) => {
+      const appModuleKey = app.moduleKey || app.id.toLowerCase();
+      const isContracted = contractedCompanyModules.some(m => 
+        m.module_key_normalized === appModuleKey ||
+        (appModuleKey === 'farmacias' && (m.module_key_normalized === 'farmacia' || m.module_key_normalized === 'pharmacy'))
+      );
+      return !isContracted;
+    });
+  }, [contractedCompanyModules]);
 
   const bootstrap = useCallback(async () => {
     setLoading(true);
@@ -57,8 +92,9 @@ export function usePortalDashboard() {
       }
 
       setUser(currentUser);
-      const { company: companyData, role, needsPasswordChange: needsChange, userAppAccess: access, teamMembers: teamData } = await api.bootstrap();
+      const { company_id: companyIdData, company: companyData, role, needsPasswordChange: needsChange, userAppAccess: access, teamMembers: teamData, companyModules: moduleData, contractedCompanyModules: contractedModuleData } = await api.bootstrap();
 
+      setCompanyId(companyIdData || companyData?.id || null);
       setCompany(companyData);
       setOnboardingData({
         rut: companyData.rut || '',
@@ -72,6 +108,47 @@ export function usePortalDashboard() {
       setNeedsPasswordChange(Boolean(needsChange));
       setUserAppAccess(access || {});
       setTeamMembers(teamData || []);
+      setCompanyModules(moduleData || []);
+      setContractedCompanyModules(contractedModuleData || []);
+
+      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        const moduleDiagnostics = AVAILABLE_APPS.map((app) => {
+          const moduleState = getPortalModuleState(moduleData || [], app.id);
+
+          return {
+            module_key: moduleState.moduleKey || app.moduleKey || app.id.toLowerCase(),
+            app_id: app.id,
+            module_status: moduleState.status,
+            contracted: moduleState.contracted,
+            implemented: moduleState.implemented,
+            enabled: moduleState.available,
+            locked: !moduleState.available,
+            comingSoon: moduleState.comingSoon,
+            openUrl: moduleState.openUrl,
+            blocked_reason: moduleState.blockedReason,
+          };
+        });
+
+        console.debug('[portal bootstrap diagnostics]', {
+          company_id: companyIdData || companyData?.id,
+          company_name: companyData?.name,
+          user_id: currentUser?.id,
+          user_email: currentUser?.email,
+          user_role: role || 'MEMBER',
+          user_app_access: access || {},
+          company_modules_raw: (moduleData || []).map((module) => ({
+            module_key: module.module_key,
+            status: module.status,
+            enabled_at: module.enabled_at,
+            disabled_at: module.disabled_at,
+          })),
+          company_modules_contracted: (contractedModuleData || []).map((module) => ({
+            module_key: module.module_key,
+            status: module.status,
+          })),
+          module_diagnostics: moduleDiagnostics,
+        });
+      }
     } catch (error) {
       console.error('Error al cargar datos:', error);
     } finally {
@@ -153,22 +230,54 @@ export function usePortalDashboard() {
   };
 
   const openModule = async (appId) => {
-    const { data: { session } } = await supabase.auth.getSession();
+    // Force refresh the session so app_metadata.company_id is present in the JWT.
+    // On first login the portal creates the company and updates app_metadata server-side,
+    // but the browser token is stale until a refresh is performed.
+    let session;
+    try {
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshed?.session) {
+        // Fallback: use current session even if stale
+        const { data: current } = await supabase.auth.getSession();
+        session = current?.session;
+      } else {
+        session = refreshed.session;
+      }
+    } catch {
+      const { data: current } = await supabase.auth.getSession();
+      session = current?.session;
+    }
+
     const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
     if (!session) {
       router.push('/login');
       return;
     }
+    const passSessionInHash = process.env.NODE_ENV !== 'production' || hostname === 'localhost' || hostname === '127.0.0.1';
+    const authHash = passSessionInHash ? `#access_token=${session.access_token}&refresh_token=${session.refresh_token}` : '';
     const urls = {
-      POS: `http://${hostname}:5173/pos#access_token=${session.access_token}&refresh_token=${session.refresh_token}`,
-      ADQUISICIONES: `http://${hostname}:5174/dashboard-compras#access_token=${session.access_token}&refresh_token=${session.refresh_token}`,
-      FARMACIAS: `http://${hostname}:5175#access_token=${session.access_token}&refresh_token=${session.refresh_token}`,
+      POS: `http://${hostname}:5173/pos${authHash}`,
+      LOGISTICA: `http://${hostname}:5176/${authHash}`,
+      CONSTRUCCION: `http://${hostname}:5177/construccion${authHash}`,
+      ADQUISICIONES: `http://${hostname}:5174/dashboard-compras${authHash}`,
+      FARMACIAS: `http://${hostname}:5175${authHash}`,
     };
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[portal openModule]', {
+        appId,
+        has_access_token: Boolean(session?.access_token),
+        has_refresh_token: Boolean(session?.refresh_token),
+        has_company_id_in_token: Boolean(session?.user?.app_metadata?.company_id),
+        company_id_from_token: session?.user?.app_metadata?.company_id || null,
+      });
+    }
+
     if (urls[appId]) window.location.href = urls[appId];
   };
 
   const handleOpenApp = async (appId) => {
-    if (appId === 'POS' || appId === 'ADQUISICIONES' || appId === 'FARMACIAS') return openModule(appId);
+    if (appId === 'POS' || appId === 'LOGISTICA' || appId === 'CONSTRUCCION' || appId === 'ADQUISICIONES' || appId === 'FARMACIAS') return openModule(appId);
   };
 
   const handleToggleModule = (appId, defaultRole) => {
@@ -195,12 +304,15 @@ export function usePortalDashboard() {
   };
 
   const refreshPortal = async () => {
-    const { company: companyData, role, needsPasswordChange: needsChange, userAppAccess: access, teamMembers: teamData } = await api.bootstrap();
+    const { company_id: companyIdData, company: companyData, role, needsPasswordChange: needsChange, userAppAccess: access, teamMembers: teamData, companyModules: moduleData, contractedCompanyModules: contractedModuleData } = await api.bootstrap();
     setCompany(companyData);
+    setCompanyId(companyIdData || companyData?.id || null);
     setUserRole(role || 'MEMBER');
     setNeedsPasswordChange(Boolean(needsChange));
     setUserAppAccess(access || {});
     setTeamMembers(teamData || []);
+    setCompanyModules(moduleData || []);
+    setContractedCompanyModules(contractedModuleData || []);
   };
 
   const handleInviteUser = async (e) => {
@@ -244,12 +356,14 @@ export function usePortalDashboard() {
   return {
     user,
     company,
+    companyId,
     loading,
     isBillingLoading,
     activeTab,
     setActiveTab,
     userRole,
     teamMembers,
+    companyModules,
     isSavingOnboarding,
     onboardingData,
     setOnboardingData,
@@ -276,6 +390,8 @@ export function usePortalDashboard() {
     isChangingPassword,
     userAppAccess,
     visibleApps,
+    upsellApps,
+    contractedCompanyModules,
     handleLogout,
     handleChangePassword,
     handleSaveOnboarding,
